@@ -40,86 +40,10 @@ export interface TodoWithShares extends Todo {
   }>
 }
 
-const STORAGE_KEY_USERS = 'todo_app_users_v1'
-const STORAGE_KEY_TODOS = 'todo_app_todos_v1'
-const STORAGE_KEY_SHARES = 'todo_app_shares_v1'
-const STORAGE_KEY_SESSION = 'todo_app_session_v1'
-
-// Initial seed data
-const SEED_USERS: User[] = [
-  {
-    id: 'u-alice-1',
-    email: 'alice@example.com',
-    name: 'Alice Johnson',
-    passwordHash: 'password123',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u-bob-2',
-    email: 'bob@example.com',
-    name: 'Bob Smith',
-    passwordHash: 'password123',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u-charlie-3',
-    email: 'charlie@example.com',
-    name: 'Charlie Brown',
-    passwordHash: 'password123',
-    createdAt: new Date().toISOString(),
-  },
-]
-
-const SEED_TODOS: Todo[] = [
-  {
-    id: 't-1',
-    title: 'Design app architecture & layout',
-    description: 'Create mobile-friendly wireframes and wire up SolidJS reactive state.',
-    complete: true,
-    creatorId: 'u-alice-1',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-  },
-  {
-    id: 't-2',
-    title: 'Review team pull requests',
-    description: 'Check security and test coverage for the new sharing features.',
-    complete: false,
-    creatorId: 'u-bob-2',
-    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-  },
-  {
-    id: 't-3',
-    title: 'Set up production deployment pipeline',
-    description: 'Configure Docker compose, healthchecks, and environment variables.',
-    complete: false,
-    creatorId: 'u-alice-1',
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
-
-const SEED_SHARES: Share[] = [
-  // Todo 1 created by Alice, shared with Bob
-  {
-    id: 's-1',
-    todoId: 't-1',
-    userId: 'u-bob-2',
-    active: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  // Todo 2 created by Bob, shared with Alice
-  {
-    id: 's-2',
-    todoId: 't-2',
-    userId: 'u-alice-1',
-    active: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
+const STORAGE_KEY_USERS = 'todo_users_v2'
+const STORAGE_KEY_TODOS = 'todo_items_v2'
+const STORAGE_KEY_SHARES = 'todo_shares_v2'
+const STORAGE_KEY_SESSION = 'todo_session_v2'
 
 function getFromStorage<T>(key: string, defaultValue: T): T {
   try {
@@ -139,53 +63,25 @@ function saveToStorage<T>(key: string, value: T): void {
   }
 }
 
-// Reactive Signals for global state
-function initUsers(): User[] {
-  const existing = getFromStorage<User[]>(STORAGE_KEY_USERS, [])
-  if (existing.length === 0) {
-    saveToStorage(STORAGE_KEY_USERS, SEED_USERS)
-    return SEED_USERS
-  }
-  return existing
-}
+// Clean initialization - starts completely empty
+const initialUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, [])
+const initialTodos = getFromStorage<Todo[]>(STORAGE_KEY_TODOS, [])
+const initialShares = getFromStorage<Share[]>(STORAGE_KEY_SHARES, [])
+const sessionUserId = getFromStorage<string | null>(STORAGE_KEY_SESSION, null)
+const initialSession = sessionUserId ? initialUsers.find((u) => u.id === sessionUserId) || null : null
 
-function initTodos(): Todo[] {
-  const existing = getFromStorage<Todo[]>(STORAGE_KEY_TODOS, [])
-  if (existing.length === 0) {
-    saveToStorage(STORAGE_KEY_TODOS, SEED_TODOS)
-    return SEED_TODOS
-  }
-  return existing
-}
+// Also clear any legacy v1 storage if present
+try {
+  localStorage.removeItem('todo_app_users_v1')
+  localStorage.removeItem('todo_app_todos_v1')
+  localStorage.removeItem('todo_app_shares_v1')
+  localStorage.removeItem('todo_app_session_v1')
+} catch {}
 
-function initShares(): Share[] {
-  const existing = getFromStorage<Share[]>(STORAGE_KEY_SHARES, [])
-  if (existing.length === 0) {
-    saveToStorage(STORAGE_KEY_SHARES, SEED_SHARES)
-    return SEED_SHARES
-  }
-  return existing
-}
-
-function initSession(users: User[]): User | null {
-  const sessionUserId = getFromStorage<string | null>(STORAGE_KEY_SESSION, null)
-  if (sessionUserId) {
-    const found = users.find((u) => u.id === sessionUserId)
-    if (found) return found
-  }
-  // Default to Alice if no session
-  const defaultUser = users[0] || null
-  if (defaultUser) {
-    saveToStorage(STORAGE_KEY_SESSION, defaultUser.id)
-  }
-  return defaultUser
-}
-
-const initialUsers = initUsers()
 const [users, setUsers] = createSignal<User[]>(initialUsers)
-const [todos, setTodos] = createSignal<Todo[]>(initTodos())
-const [shares, setShares] = createSignal<Share[]>(initShares())
-const [currentUser, setCurrentUserSignal] = createSignal<User | null>(initSession(initialUsers))
+const [todos, setTodos] = createSignal<Todo[]>(initialTodos)
+const [shares, setShares] = createSignal<Share[]>(initialShares)
+const [currentUser, setCurrentUserSignal] = createSignal<User | null>(initialSession)
 
 export const store = {
   // Signals
@@ -242,16 +138,6 @@ export const store = {
     setCurrentUserSignal(null)
   },
 
-  switchUser(userId: string): boolean {
-    const user = users().find((u) => u.id === userId)
-    if (user) {
-      saveToStorage(STORAGE_KEY_SESSION, user.id)
-      setCurrentUserSignal(user)
-      return true
-    }
-    return false
-  },
-
   // Todo queries & mutations
   getTodosForCurrentUser(): TodoWithShares[] {
     const user = currentUser()
@@ -261,13 +147,11 @@ export const store = {
     const allShares = shares()
     const allUsers = users()
 
-    // Find todos created by user or shared with user
     const accessibleTodos = allTodos.filter((t) => {
       if (t.creatorId === user.id) return true
       return allShares.some((s) => s.todoId === t.id && s.userId === user.id && s.active)
     })
 
-    // Sort by updatedAt descending
     accessibleTodos.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 
     return accessibleTodos.map((t) => {
@@ -275,7 +159,7 @@ export const store = {
       const todoShares = allShares
         .filter((s) => s.todoId === t.id && s.active)
         .map((s) => {
-          const u = allUsers.find((user) => user.id === s.userId)
+          const u = allUsers.find((member) => member.id === s.userId)
           return {
             shareId: s.id,
             userId: s.userId,
@@ -316,7 +200,7 @@ export const store = {
     const todoShares = allShares
       .filter((s) => s.todoId === t.id && s.active)
       .map((s) => {
-        const u = allUsers.find((user) => user.id === s.userId)
+        const u = allUsers.find((member) => member.id === s.userId)
         return {
           shareId: s.id,
           userId: s.userId,
@@ -404,9 +288,7 @@ export const store = {
     const item = allTodos.find((t) => t.id === todoId)
     if (!item) return false
 
-    // Only owner can delete todo
     if (item.creatorId !== user.id) {
-      // If shared user deletes, it just unshares them
       this.unshareTodo(todoId, user.id)
       return true
     }
@@ -421,7 +303,6 @@ export const store = {
     return true
   },
 
-  // Share methods
   shareTodo(todoId: string, targetEmail: string): { success: boolean; message: string } {
     const user = currentUser()
     if (!user) return { success: false, message: 'You must be logged in to share.' }
@@ -431,11 +312,11 @@ export const store = {
 
     const targetUser = users().find((u) => u.email === cleanEmail)
     if (!targetUser) {
-      return { success: false, message: `No user found with email "${cleanEmail}".` }
+      return { success: false, message: `No registered user found with email "${cleanEmail}".` }
     }
 
     if (targetUser.id === user.id) {
-      return { success: false, message: 'You already own this todo.' }
+      return { success: false, message: 'You cannot share a todo with yourself.' }
     }
 
     const allTodos = todos()
@@ -449,7 +330,6 @@ export const store = {
       if (existing.active) {
         return { success: false, message: `Already shared with ${targetUser.name} (${cleanEmail}).` }
       } else {
-        // Reactivate
         const updatedShares = allShares.map((s) =>
           s.id === existing.id ? { ...s, active: true, updatedAt: new Date().toISOString() } : s
         )
@@ -459,7 +339,6 @@ export const store = {
       }
     }
 
-    // New share
     const newShare: Share = {
       id: crypto.randomUUID(),
       todoId,
@@ -491,23 +370,5 @@ export const store = {
     saveToStorage(STORAGE_KEY_SHARES, updatedShares)
     setShares(updatedShares)
     return { success: true, message: 'Access removed successfully.' }
-  },
-
-  // Reset to initial seed data
-  resetDemoData(): void {
-    localStorage.removeItem(STORAGE_KEY_USERS)
-    localStorage.removeItem(STORAGE_KEY_TODOS)
-    localStorage.removeItem(STORAGE_KEY_SHARES)
-    localStorage.removeItem(STORAGE_KEY_SESSION)
-
-    saveToStorage(STORAGE_KEY_USERS, SEED_USERS)
-    saveToStorage(STORAGE_KEY_TODOS, SEED_TODOS)
-    saveToStorage(STORAGE_KEY_SHARES, SEED_SHARES)
-    saveToStorage(STORAGE_KEY_SESSION, SEED_USERS[0].id)
-
-    setUsers(SEED_USERS)
-    setTodos(SEED_TODOS)
-    setShares(SEED_SHARES)
-    setCurrentUserSignal(SEED_USERS[0])
   },
 }

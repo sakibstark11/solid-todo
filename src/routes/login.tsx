@@ -20,15 +20,6 @@ export default function Login() {
     }
   }
 
-  const handleDemoLogin = (demoEmail: string) => {
-    setEmail(demoEmail)
-    setPassword('password123')
-    const res = store.login(demoEmail, 'password123')
-    if (res.success) {
-      navigate('/todos')
-    }
-  }
-
   return (
     <div class="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/60">
       <div class="max-w-md w-full space-y-8 bg-white p-8 sm:p-10 rounded-2xl shadow-xl border border-gray-100">
@@ -36,9 +27,9 @@ export default function Login() {
           <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 text-white font-bold text-2xl shadow-lg shadow-blue-500/30 mb-4">
             ✓
           </div>
-          <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome Back</h2>
+          <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">Sign In</h2>
           <p class="mt-2 text-sm text-gray-600">
-            Sign in to access your shared todos and personal tasks
+            Sign in to manage your tasks and shared todos
           </p>
         </div>
 
@@ -62,22 +53,19 @@ export default function Login() {
               required
               value={email()}
               onInput={(e) => setEmail(e.currentTarget.value)}
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
             />
           </div>
 
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-sm font-semibold text-gray-700">Password</label>
-              <span class="text-xs text-gray-400">Default: password123</span>
-            </div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
             <input
               type="password"
               required
               value={password()}
               onInput={(e) => setPassword(e.currentTarget.value)}
-              placeholder="••••••••"
+              placeholder="Enter your password"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
             />
           </div>
@@ -90,35 +78,10 @@ export default function Login() {
           </button>
         </form>
 
-        {/* 1-Click Demo Accounts */}
-        <div class="pt-4 border-t border-gray-100">
-          <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 text-center mb-3">
-            Quick 1-Click Demo Sign In
-          </p>
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('alice@example.com')}
-              class="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold transition-colors border border-blue-100 flex flex-col items-center"
-            >
-              <span>Alice Johnson</span>
-              <span class="text-[10px] text-blue-500 font-normal">alice@example.com</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('bob@example.com')}
-              class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold transition-colors border border-indigo-100 flex flex-col items-center"
-            >
-              <span>Bob Smith</span>
-              <span class="text-[10px] text-indigo-500 font-normal">bob@example.com</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="text-center text-sm text-gray-600">
+        <div class="text-center text-sm text-gray-600 pt-2 border-t border-gray-100">
           Don't have an account?{' '}
           <A href="/register" class="font-semibold text-blue-600 hover:text-blue-500 underline">
-            Create an account
+            Register here
           </A>
         </div>
       </div>

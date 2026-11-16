@@ -106,7 +106,7 @@ export default function ShareModal(props: ShareModalProps) {
                   type="email"
                   value={emailInput()}
                   onInput={(e) => setEmailInput(e.currentTarget.value)}
-                  placeholder="e.g. bob@example.com"
+                  placeholder="Enter registered user email"
                   class="flex-1 px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 />
                 <button
@@ -118,10 +118,10 @@ export default function ShareModal(props: ShareModalProps) {
               </div>
             </div>
 
-            {/* Quick Suggestions */}
+            {/* Registered Users Chips */}
             <Show when={otherUsers().length > 0}>
               <div>
-                <p class="text-xs text-gray-500 mb-1.5">Quick pick a team member:</p>
+                <p class="text-xs text-gray-500 mb-1.5">Registered team members:</p>
                 <div class="flex flex-wrap gap-1.5">
                   <For each={otherUsers()}>
                     {(u) => (

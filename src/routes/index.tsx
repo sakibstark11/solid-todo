@@ -9,13 +9,13 @@ export default function Index() {
         {/* Hero Section */}
         <div class="text-center space-y-4 pt-6">
           <div class="inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-xs font-semibold px-3.5 py-1.5 rounded-full border border-blue-200 shadow-sm">
-            <span>✨</span> SolidJS + Tailwind Collaborative Todo App
+            <span>✓</span> Collaborative Todo Application
           </div>
           <h1 class="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight">
-            Manage Tasks & <span class="text-blue-600">Share with Your Team</span>
+            Manage Tasks & <span class="text-blue-600">Share with Others</span>
           </h1>
           <p class="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
-            A collaborative todo manager with dedicated user authentication, task sharing by email, permission management, and real-time state.
+            A task management application featuring user authentication, todo sharing by user email, permissions, and responsive updates.
           </p>
 
           <div class="pt-4 flex flex-wrap items-center justify-center gap-3">
@@ -27,7 +27,7 @@ export default function Index() {
                     href="/login"
                     class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02]"
                   >
-                    Log In to Your Account
+                    Sign In to Your Account
                   </A>
                   <A
                     href="/register"
@@ -42,14 +42,14 @@ export default function Index() {
                 <div class="space-y-3">
                   <div class="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm text-sm">
                     <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                    <span>Logged in as <strong>{user().name}</strong> ({user().email})</span>
+                    <span>Signed in as <strong>{user().name}</strong> ({user().email})</span>
                   </div>
                   <div>
                     <A
                       href="/todos"
                       class="inline-block px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02]"
                     >
-                      Open My Todo Workspace &rarr;
+                      Open Workspace &rarr;
                     </A>
                   </div>
                 </div>
@@ -64,9 +64,9 @@ export default function Index() {
             <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center text-xl font-bold mb-4">
               🔐
             </div>
-            <h3 class="text-base font-bold text-gray-900 mb-1">User Authentication</h3>
+            <h3 class="text-base font-bold text-gray-900 mb-1">User Accounts</h3>
             <p class="text-xs text-gray-600 leading-relaxed">
-              Dedicated Login and Register pages. Switch between demo team accounts (Alice, Bob, Charlie) in 1-click to test collaboration.
+              Sign up or log in securely. Each user maintains their own private tasks and shared collaboration views.
             </p>
           </div>
 
@@ -74,9 +74,9 @@ export default function Index() {
             <div class="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center text-xl font-bold mb-4">
               👥
             </div>
-            <h3 class="text-base font-bold text-gray-900 mb-1">Todo Sharing</h3>
+            <h3 class="text-base font-bold text-gray-900 mb-1">Task Sharing</h3>
             <p class="text-xs text-gray-600 leading-relaxed">
-              Share any task with other users by email. Shared members can view, complete, and edit tasks. Revoke access whenever you need.
+              Share tasks with any registered user by their email address. Manage access or revoke permissions at any time.
             </p>
           </div>
 
@@ -86,31 +86,31 @@ export default function Index() {
             </div>
             <h3 class="text-base font-bold text-gray-900 mb-1">Fast & Persistent</h3>
             <p class="text-xs text-gray-600 leading-relaxed">
-              Powered by SolidJS fine-grained reactivity and Vite. Tasks and shares are saved so your work is never lost.
+              Built on SolidJS fine-grained reactivity. Tasks and collaboration state persist seamlessly.
             </p>
           </div>
         </div>
 
-        {/* Quick Collaboration Test Guide */}
-        <div class="bg-white rounded-2xl p-6 sm:p-8 border border-blue-100 shadow-sm">
-          <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <span>💡</span> How to Test the Sharing Feature:
+        {/* How Sharing Works */}
+        <div class="bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 shadow-sm">
+          <h3 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <span>🔗</span> How Task Sharing Works
           </h3>
-          <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+          <ol class="list-decimal list-inside space-y-2.5 text-sm text-gray-700">
             <li>
-              Go to <A href="/todos" class="text-blue-600 underline font-semibold">Workspace</A> (logged in as <strong>Alice</strong> by default).
+              Sign up or log into your account.
             </li>
             <li>
-              Click the <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-xs font-semibold">🔗 Share</span> button on any task.
+              Create a task in your workspace.
             </li>
             <li>
-              Type <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs text-indigo-600">bob@example.com</code> (or click the quick-pick button) and hit <strong>Share</strong>.
+              Click the <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-xs font-semibold">🔗 Share</span> button on the task.
             </li>
             <li>
-              Use the top-right account dropdown to <strong>Switch to Bob</strong>.
+              Enter the email address of the registered user you want to share with and confirm.
             </li>
             <li>
-              Bob will now see the task in his workspace with a <span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-xs font-semibold">👥 Shared by Alice</span> badge!
+              The shared user can view, edit, and check off the task from their own workspace.
             </li>
           </ol>
         </div>

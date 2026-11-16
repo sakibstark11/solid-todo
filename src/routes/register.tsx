@@ -30,7 +30,7 @@ export default function Register() {
           </div>
           <h2 class="text-3xl font-extrabold text-gray-900 tracking-tight">Create an Account</h2>
           <p class="mt-2 text-sm text-gray-600">
-            Sign up to manage and collaborate on todos with your team
+            Sign up to start creating and sharing your tasks
           </p>
         </div>
 
@@ -54,7 +54,7 @@ export default function Register() {
               required
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
-              placeholder="e.g. Dana Scully"
+              placeholder="Your Name"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
             />
           </div>
@@ -68,7 +68,7 @@ export default function Register() {
               required
               value={email()}
               onInput={(e) => setEmail(e.currentTarget.value)}
-              placeholder="dana@example.com"
+              placeholder="name@domain.com"
               class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
             />
           </div>
@@ -96,7 +96,7 @@ export default function Register() {
           </button>
         </form>
 
-        <div class="text-center text-sm text-gray-600">
+        <div class="text-center text-sm text-gray-600 pt-2 border-t border-gray-100">
           Already have an account?{' '}
           <A href="/login" class="font-semibold text-blue-600 hover:text-blue-500 underline">
             Sign in
