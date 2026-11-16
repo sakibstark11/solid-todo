@@ -6,8 +6,34 @@
       "email": "1@test.com",
       "passwordHash": "12345678",
       "createdAt": "2026-11-16T15:54:19.838Z"
+    },
+    {
+      "id": "0b229726-616a-4266-90ab-91554dd2c0ae",
+      "name": "sakib 2",
+      "email": "2@test.com",
+      "passwordHash": "123456787",
+      "createdAt": "2026-11-16T15:55:08.033Z"
     }
   ],
-  "todos": [],
-  "shares": []
+  "todos": [
+    {
+      "id": "96c4f866-1270-4fdc-804e-48b5dcb8f8f5",
+      "title": "test 1",
+      "description": "bla bla",
+      "complete": false,
+      "creatorId": "1d85437a-6b94-497d-968f-9c6097092888",
+      "createdAt": "2026-11-16T15:55:15.516Z",
+      "updatedAt": "2026-11-16T15:55:15.516Z"
+    }
+  ],
+  "shares": [
+    {
+      "id": "1bcdc3b5-9e8b-458e-8962-4970969d706b",
+      "todoId": "96c4f866-1270-4fdc-804e-48b5dcb8f8f5",
+      "userId": "0b229726-616a-4266-90ab-91554dd2c0ae",
+      "active": true,
+      "createdAt": "2026-11-16T15:55:23.189Z",
+      "updatedAt": "2026-11-16T18:16:10.736Z"
+    }
+  ]
 }

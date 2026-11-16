@@ -97,16 +97,6 @@ if (currentUser()) {
   fetchUsers()
 }
 
-// Periodic background refresh (every 3s) so changes from other tabs/incognito appear automatically
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    fetchUsers()
-    if (currentUser()) {
-      fetchTodos()
-    }
-  }, 3000)
-}
-
 export const store = {
   // Signals
   currentUser,
@@ -279,10 +269,9 @@ export const store = {
   searchUsers(query: string): User[] {
     const cur = currentUser()
     const clean = query.trim().toLowerCase()
+    if (!clean) return []
+
     const otherUsers = users().filter((u) => u.id !== cur?.id)
-
-    if (!clean) return otherUsers
-
     return otherUsers.filter(
       (u) =>
         u.name.toLowerCase().includes(clean) ||
