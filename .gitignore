@@ -1,7 +1,6 @@
 node_modules/
 dist/
+.output/
 .env
-drizzle/
 *.log
 .DS_Store
-npm-debug.log*

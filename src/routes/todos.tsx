@@ -1,41 +1,105 @@
-import { Show, For } from 'solid-js'
+import { createSignal, For, Show, Suspense } from "solid-js";
+import { createAsync, useSearchParams, type RouteDefinition } from "@solidjs/router";
+import { Title } from "@solidjs/meta";
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@suid/material";
+import Add from "@suid/icons-material/Add";
+import { getMyTodos, getSharedTodos, querySession } from "~/lib/api";
+import { createCursorStack } from "~/lib/cursor";
+import Pagination from "~/components/Pagination";
+import TodoForm from "~/components/TodoForm";
+import TodoItem from "~/components/TodoItem";
+
+export const route = {
+  async preload({ location }) {
+    await querySession("/todos");
+    const params = new URLSearchParams(location.search);
+    const cursor = params.get("cursor");
+    return params.get("tab") === "shared" ? getSharedTodos(cursor) : getMyTodos(cursor);
+  },
+} satisfies RouteDefinition;
 
 export default function Todos() {
-  const [todos] = createSignal([])
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [createOpen, setCreateOpen] = createSignal(false);
+  const history = createCursorStack();
+
+  const tab = () => (searchParams.tab === "shared" ? "shared" : "mine");
+  const cursor = () =>
+    typeof searchParams.cursor === "string" && searchParams.cursor ? searchParams.cursor : null;
+  const data = createAsync(() =>
+    tab() === "shared" ? getSharedTodos(cursor()) : getMyTodos(cursor())
+  );
 
   return (
-    <div class="min-h-screen bg-gray-50 p-6">
-      <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">My Todos</h1>
-
-        <form method="post" action="/api/todos" class="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div class="space-y-4">
-            <input type="text" name="title" required placeholder="What needs to be done?" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" />
-            <textarea name="description" placeholder="Add details (optional)" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none" rows={2} />
-            <button type="submit" class="w-full bg-blue-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200">Create Todo</button>
-          </div>
-        </form>
-
-        <For each={todos}>
-          {(todo) => (
-            <div class="bg-white rounded-lg shadow-md p-5 border-l-4 border-blue-500 mb-4">
-              <div class="flex items-start gap-3">
-                <input type="checkbox" checked={todo.complete} on:change={(e) => { todo.complete = e.value }} class="mt-1 w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500" />
-                <div class="flex-1">
-                  <span class={todo.complete ? 'line-through text-gray-400' : ''} class="text-xl font-medium">{todo.title}</span>
-                  {todo.description && (
-                    <p class="text-gray-600 mt-2">{todo.description}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+    <Box>
+      <Title>Todos · Todo App</Title>
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+        <Typography variant="h5">Todos</Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => setCreateOpen(true)}>
+          New todo
+        </Button>
+      </Stack>
+      <ToggleButtonGroup
+        exclusive
+        value={tab()}
+        onChange={(_event, value) => {
+          if (value) {
+            history.reset();
+            setSearchParams({ tab: value === "shared" ? "shared" : undefined, cursor: undefined });
+          }
+        }}
+        sx={{ mb: 2 }}
+      >
+        <ToggleButton value="mine">My todos</ToggleButton>
+        <ToggleButton value="shared">Shared with me</ToggleButton>
+      </ToggleButtonGroup>
+      <Suspense
+        fallback={
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+            <CircularProgress />
+          </Box>
+        }
+      >
+        <Show when={data()}>
+          {(pageData) => (
+            <Box>
+              <Show
+                when={pageData().items.length > 0}
+                fallback={
+                  <Alert severity="info">
+                    {tab() === "shared"
+                      ? "No todos are shared with you yet."
+                      : "No todos yet. Create your first one."}
+                  </Alert>
+                }
+              >
+                <For each={pageData().items}>{(todo) => <TodoItem todo={todo} />}</For>
+              </Show>
+              <Pagination
+                data={pageData()}
+                canGoBack={history.canGoBack()}
+                onPrev={() => setSearchParams({ cursor: history.pop() ?? undefined })}
+                onNext={(next) => {
+                  history.push(cursor());
+                  setSearchParams({ cursor: next });
+                }}
+              />
+            </Box>
           )}
-        </For>
-
-        <Show when={todos.length === 0}>
-          <p class="text-center text-gray-500">No todos yet. Create one above!</p>
         </Show>
-      </div>
-    </div>
-  )
+      </Suspense>
+      <Show when={createOpen()}>
+        <TodoForm open onClose={() => setCreateOpen(false)} />
+      </Show>
+    </Box>
+  );
 }

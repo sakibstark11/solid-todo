@@ -1,33 +1,37 @@
 {
   "name": "todo-app",
-  "version": "1.0.0",
-  "description": "A Todo app built with SolidStart",
+  "version": "2.0.0",
+  "description": "Todo app with sharing, built with SolidStart, Drizzle and PostgreSQL",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "@solidjs/meta": "^0.29.0",
-    "@solidjs/router": "^0.15.0",
-    "bcryptjs": "^3.0.0",
-    "clsx": "^2.1.1",
-    "drizzle-orm": "^0.38.3",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "^1.0.3",
+    "@solidjs/start": "^2.2.3",
+    "@suid/icons-material": "^0.9.0",
+    "@suid/material": "^0.19.0",
+    "drizzle-orm": "^0.45.4",
+    "nitro": "3.0.261103-rc",
     "pg": "^8.16.0",
-    "solid-js": "^1.9.0",
-    "tailwindcss": "^3.4.17",
-    "vite-plugin-solid": "^2.11.0",
-    "zod": "^3.25.0"
+    "solid-js": "^1.9.19",
+    "vite": "^8.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^26.6.6",
-    "@types/pg": "^8.23.1",
-    "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.31.0",
-    "postcss": "^8.5.3",
-    "typescript": "^5.7.2",
-    "vite": "^8.3.8"
+    "@types/node": "^24.7.0",
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^5.7.2"
   }
 }

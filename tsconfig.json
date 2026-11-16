@@ -4,16 +4,18 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "isolatedModules": true,
+    "allowJs": true,
+    "strict": true,
     "noEmit": true,
-    "skipLibCheck": true,
     "types": ["vite/client", "node"],
+    "isolatedModules": true,
+    "skipLibCheck": true,
     "paths": {
-      "#server/*": ["./src/server/*"]
+      "~/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src", "vite.config.ts", "drizzle.config.ts"]
 }
