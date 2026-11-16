@@ -1,4 +1,4 @@
-import { createSignal, createMemo, Show, For } from 'solid-js'
+import { createSignal, createMemo, onMount, Show, For } from 'solid-js'
 import { A, Navigate } from '@solidjs/router'
 import { store, type TodoWithShares } from '../lib/store'
 import ShareModal from '../components/ShareModal'
@@ -9,6 +9,11 @@ export default function Todos() {
   if (!store.currentUser()) {
     return <Navigate href="/login" />
   }
+
+  onMount(() => {
+    store.refreshTodos()
+    store.refreshUsers()
+  })
 
   const [filter, setFilter] = createSignal<FilterType>('all')
   const [searchQuery, setSearchQuery] = createSignal('')
@@ -24,27 +29,27 @@ export default function Todos() {
     }, 3500)
   }
 
-  const handleCreateTodo = (e: SubmitEvent) => {
+  const handleCreateTodo = async (e: SubmitEvent) => {
     e.preventDefault()
     const title = newTitle().trim()
     if (!title) return
 
-    const created = store.createTodo(title, newDescription().trim())
-    if (created) {
+    const ok = await store.createTodo(title, newDescription().trim())
+    if (ok) {
       setNewTitle('')
       setNewDescription('')
       showNotice(`Created todo "${title}"!`)
     }
   }
 
-  const handleToggle = (id: string, title: string) => {
-    store.toggleComplete(id)
+  const handleToggle = async (id: string, title: string) => {
+    await store.toggleComplete(id)
     showNotice(`Updated "${title}"`)
   }
 
-  const handleDelete = (id: string, title: string, isOwner: boolean) => {
+  const handleDelete = async (id: string, title: string, isOwner: boolean) => {
     if (confirm(isOwner ? `Delete todo "${title}"?` : `Remove yourself from "${title}"?`)) {
-      store.deleteTodo(id)
+      await store.deleteTodo(id)
       showNotice(isOwner ? `Deleted "${title}".` : `Removed access to "${title}".`)
     }
   }

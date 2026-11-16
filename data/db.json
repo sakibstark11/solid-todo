@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "id": "1d85437a-6b94-497d-968f-9c6097092888",
+      "name": "sakib 1",
+      "email": "1@test.com",
+      "passwordHash": "12345678",
+      "createdAt": "2026-11-16T15:54:19.838Z"
+    }
+  ],
+  "todos": [],
+  "shares": []
+}

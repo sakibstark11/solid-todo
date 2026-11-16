@@ -1,4 +1,4 @@
-import { createSignal, createMemo, Show, For } from 'solid-js'
+import { createSignal, createMemo, onMount, Show, For } from 'solid-js'
 import { store, type TodoWithShares, type User } from '../lib/store'
 
 interface ShareModalProps {
@@ -9,24 +9,46 @@ interface ShareModalProps {
 export default function ShareModal(props: ShareModalProps) {
   const [searchInput, setSearchInput] = createSignal('')
   const [feedback, setFeedback] = createSignal<{ text: string; isError: boolean } | null>(null)
+  const [isSubmitting, setIsSubmitting] = createSignal(false)
+
+  // Refresh users list immediately on open
+  onMount(() => {
+    store.refreshUsers()
+    store.refreshTodos()
+  })
 
   const todo = (): TodoWithShares | null => store.getTodoById(props.todoId)
 
-  const searchResults = createMemo<User[]>(() => {
-    const q = searchInput().trim()
-    if (!q) return []
-    return store.searchUsers(q)
+  // Other users in system (excluding current logged-in user)
+  const allOtherUsers = createMemo<User[]>(() => {
+    const cur = store.currentUser()
+    return store.users().filter((u) => u.id !== cur?.id)
   })
 
-  const handleShareWithUser = (targetUser: User) => {
-    const res = store.shareTodoWithUser(props.todoId, targetUser.id)
-    setFeedback({ text: res.message, isError: !res.success })
-    if (res.success) {
-      setSearchInput('')
-    }
+  // Filtered by search input
+  const filteredUsers = createMemo<User[]>(() => {
+    const q = searchInput().trim().toLowerCase()
+    const others = allOtherUsers()
+    if (!q) return others
+    return others.filter(
+      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    )
+  })
+
+  const isAlreadyShared = (userId: string) => {
+    const currentTodo = todo()
+    if (!currentTodo) return false
+    return currentTodo.sharedUsers.some((s) => s.userId === userId && s.active)
   }
 
-  const handleFormSubmit = (e: SubmitEvent) => {
+  const handleShareWithUser = async (targetUser: User) => {
+    setIsSubmitting(true)
+    const res = await store.shareTodoWithUser(props.todoId, targetUser.id)
+    setIsSubmitting(false)
+    setFeedback({ text: res.message, isError: !res.success })
+  }
+
+  const handleFormSubmit = async (e: SubmitEvent) => {
     e.preventDefault()
     const target = searchInput().trim()
     if (!target) {
@@ -34,15 +56,19 @@ export default function ShareModal(props: ShareModalProps) {
       return
     }
 
-    const res = store.shareTodo(props.todoId, target)
+    setIsSubmitting(true)
+    const res = await store.shareTodo(props.todoId, target)
+    setIsSubmitting(false)
     setFeedback({ text: res.message, isError: !res.success })
     if (res.success) {
       setSearchInput('')
     }
   }
 
-  const handleUnshare = (userId: string, userName: string) => {
-    const res = store.unshareTodo(props.todoId, userId)
+  const handleUnshare = async (userId: string, userName: string) => {
+    setIsSubmitting(true)
+    const res = await store.unshareTodo(props.todoId, userId)
+    setIsSubmitting(false)
     setFeedback({
       text: res.success ? `Revoked access for ${userName}.` : res.message,
       isError: !res.success,
@@ -63,7 +89,7 @@ export default function ShareModal(props: ShareModalProps) {
           <div class="flex items-start justify-between pb-4 border-b border-gray-100">
             <div>
               <div class="flex items-center space-x-2">
-                <span class="p-1.5 bg-blue-100 text-blue-700 rounded-md text-sm">🔗</span>
+                <span class="p-1.5 bg-blue-100 text-blue-700 rounded-md text-sm font-bold">🔗</span>
                 <h3 class="text-xl font-bold text-gray-900">Share Todo</h3>
               </div>
               <p class="text-sm text-gray-500 mt-1 line-clamp-1 font-medium">
@@ -82,7 +108,7 @@ export default function ShareModal(props: ShareModalProps) {
           <Show when={feedback()}>
             {(fb) => (
               <div
-                class={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center justify-between ${
+                class={`mt-4 p-3 rounded-xl text-sm font-medium flex items-center justify-between ${
                   fb().isError
                     ? 'bg-red-50 text-red-800 border border-red-200'
                     : 'bg-green-50 text-green-800 border border-green-200'
@@ -99,11 +125,11 @@ export default function ShareModal(props: ShareModalProps) {
             )}
           </Show>
 
-          {/* Search Form (by Name or Email) */}
+          {/* Search Form */}
           <form onSubmit={handleFormSubmit} class="mt-5 space-y-3">
             <div>
               <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Search user by name or email
+                Search Registered Users by Name or Email
               </label>
               <div class="flex gap-2">
                 <div class="relative flex-1">
@@ -111,9 +137,10 @@ export default function ShareModal(props: ShareModalProps) {
                     type="text"
                     value={searchInput()}
                     onInput={(e) => setSearchInput(e.currentTarget.value)}
-                    placeholder="Search by name or email..."
-                    class="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Type name or email to filter..."
+                    class="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all pl-9"
                   />
+                  <span class="absolute left-3 top-2.5 text-xs text-gray-400">🔍</span>
                   <Show when={searchInput()}>
                     <button
                       type="button"
@@ -126,104 +153,133 @@ export default function ShareModal(props: ShareModalProps) {
                 </div>
                 <button
                   type="submit"
-                  class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                  disabled={isSubmitting()}
+                  class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
                 >
                   Share
                 </button>
               </div>
             </div>
-
-            {/* Live Search Results */}
-            <Show when={searchInput().trim().length > 0}>
-              <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
-                <p class="text-xs font-semibold text-gray-500">
-                  Matching users ({searchResults().length}):
-                </p>
-
-                <For each={searchResults()}>
-                  {(user) => (
-                    <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 shadow-xs">
-                      <div>
-                        <div class="text-xs font-bold text-gray-800">{user.name}</div>
-                        <div class="text-[11px] text-gray-500">{user.email}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleShareWithUser(user)}
-                        class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
-                      >
-                        Share
-                      </button>
-                    </div>
-                  )}
-                </For>
-
-                <Show when={searchResults().length === 0}>
-                  <p class="text-xs text-gray-400 italic py-1">
-                    No registered user found matching "{searchInput()}".
-                  </p>
-                </Show>
-              </div>
-            </Show>
           </form>
 
-          {/* People with Access */}
-          <div class="mt-6 pt-5 border-t border-gray-100">
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
-              People with access
+          {/* Available Users List */}
+          <div class="mt-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Registered Users ({filteredUsers().length})
+              </span>
+              <button
+                type="button"
+                onClick={() => store.refreshUsers()}
+                class="text-xs text-blue-600 hover:underline"
+              >
+                ↺ Refresh List
+              </button>
+            </div>
+
+            <div class="space-y-2 max-h-48 overflow-y-auto p-1">
+              <For each={filteredUsers()}>
+                {(user) => {
+                  const shared = () => isAlreadyShared(user.id)
+                  return (
+                    <div class="flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100/80 rounded-xl border border-gray-200 transition-colors">
+                      <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p class="text-sm font-bold text-gray-900">{user.name}</p>
+                          <p class="text-xs text-gray-500">{user.email}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Show
+                          when={shared()}
+                          fallback={
+                            <button
+                              type="button"
+                              disabled={isSubmitting()}
+                              onClick={() => handleShareWithUser(user)}
+                              class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1"
+                            >
+                              <span>🔗</span> Share
+                            </button>
+                          }
+                        >
+                          <div class="flex items-center gap-2">
+                            <span class="text-[11px] bg-green-100 text-green-800 font-semibold px-2 py-0.5 rounded-md">
+                              ✓ Shared
+                            </span>
+                            <button
+                              type="button"
+                              disabled={isSubmitting()}
+                              onClick={() => handleUnshare(user.id, user.name)}
+                              class="text-xs text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Revoke
+                            </button>
+                          </div>
+                        </Show>
+                      </div>
+                    </div>
+                  )
+                }}
+              </For>
+
+              {/* Empty State: 0 Other Users Registered */}
+              <Show when={allOtherUsers().length === 0}>
+                <div class="p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-xs space-y-1.5">
+                  <p class="font-bold flex items-center gap-1">
+                    <span>ℹ️</span> No other users registered yet
+                  </p>
+                  <p class="text-amber-800">
+                    You are currently the only registered user in the application (<strong>{store.currentUser()?.name}</strong>).
+                  </p>
+                  <p class="text-amber-700">
+                    To share a task with someone:
+                  </p>
+                  <ol class="list-decimal list-inside pl-1 space-y-0.5 text-amber-800">
+                    <li>Open an Incognito window (or a second tab/browser).</li>
+                    <li>Register another user (e.g. named <em>"sakib"</em> with a different email).</li>
+                    <li>They will immediately appear in this list ready to be shared with!</li>
+                  </ol>
+                </div>
+              </Show>
+
+              {/* No search matches */}
+              <Show when={allOtherUsers().length > 0 && filteredUsers().length === 0}>
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center text-xs text-gray-500">
+                  No registered users match <strong>"{searchInput()}"</strong>.
+                </div>
+              </Show>
+            </div>
+          </div>
+
+          {/* Current Shares / Permissions */}
+          <div class="mt-5 pt-4 border-t border-gray-100">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+              Active Shares on this Todo ({todo()?.sharedUsers.length || 0})
             </h4>
 
-            <div class="space-y-2.5 max-h-56 overflow-y-auto">
-              {/* Creator / Owner */}
-              <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                <div class="flex items-center space-x-3">
-                  <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">
-                    {todo()?.creatorName.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <p class="text-sm font-semibold text-gray-900">{todo()?.creatorName}</p>
-                    <p class="text-xs text-gray-500">{todo()?.creatorEmail}</p>
-                  </div>
-                </div>
-                <span class="text-xs bg-gray-200 text-gray-700 font-medium px-2 py-0.5 rounded-full">
-                  Owner
-                </span>
-              </div>
-
-              {/* Shared Users */}
+            <div class="space-y-1.5 max-h-36 overflow-y-auto">
               <For each={todo()?.sharedUsers}>
                 {(share) => (
-                  <div class="flex items-center justify-between p-2.5 bg-white hover:bg-gray-50 rounded-xl border border-gray-200 transition-colors">
-                    <div class="flex items-center space-x-3">
-                      <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
-                        {share.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">{share.name}</p>
-                        <p class="text-xs text-gray-500">{share.email}</p>
-                      </div>
-                    </div>
-
-                    <div class="flex items-center space-x-2">
-                      <span class="text-xs bg-green-100 text-green-700 font-medium px-2 py-0.5 rounded-full">
-                        Can edit
-                      </span>
-                      <button
-                        onClick={() => handleUnshare(share.userId, share.name)}
-                        class="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 p-1.5 rounded-lg transition-colors font-medium"
-                        title="Remove access"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                  <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-xs">
+                    <span class="font-medium text-gray-800">
+                      {share.name} <span class="text-gray-400">({share.email})</span>
+                    </span>
+                    <button
+                      onClick={() => handleUnshare(share.userId, share.name)}
+                      class="text-red-600 hover:text-red-800 font-semibold"
+                    >
+                      Remove Access
+                    </button>
                   </div>
                 )}
               </For>
-
-              <Show when={todo()?.sharedUsers.length === 0}>
-                <p class="text-xs text-gray-400 italic text-center py-2">
-                  This todo has not been shared with anyone yet.
-                </p>
+              <Show when={!todo()?.sharedUsers || todo()?.sharedUsers.length === 0}>
+                <p class="text-xs text-gray-400 italic">No one else has access to this todo yet.</p>
               </Show>
             </div>
           </div>
@@ -234,7 +290,7 @@ export default function ShareModal(props: ShareModalProps) {
               onClick={props.onClose}
               class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
             >
-              Done
+              Close
             </button>
           </div>
         </div>

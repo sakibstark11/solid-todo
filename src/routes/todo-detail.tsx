@@ -35,11 +35,11 @@ export default function TodoDetail() {
     }
   }
 
-  const handleSaveEdit = (e: SubmitEvent) => {
+  const handleSaveEdit = async (e: SubmitEvent) => {
     e.preventDefault()
     if (!editTitle().trim() || !todoId()) return
 
-    const ok = store.updateTodo(todoId(), {
+    const ok = await store.updateTodo(todoId(), {
       title: editTitle(),
       description: editDesc(),
     })
@@ -49,41 +49,41 @@ export default function TodoDetail() {
     }
   }
 
-  const handleShareWithUser = (targetUser: User) => {
+  const handleShareWithUser = async (targetUser: User) => {
     if (!todoId()) return
-    const res = store.shareTodoWithUser(todoId(), targetUser.id)
+    const res = await store.shareTodoWithUser(todoId(), targetUser.id)
     setMessage({ text: res.message, isError: !res.success })
     if (res.success) {
       setShareInput('')
     }
   }
 
-  const handleShare = (e: SubmitEvent) => {
+  const handleShare = async (e: SubmitEvent) => {
     e.preventDefault()
     const target = shareInput().trim()
     if (!target || !todoId()) return
 
-    const res = store.shareTodo(todoId(), target)
+    const res = await store.shareTodo(todoId(), target)
     setMessage({ text: res.message, isError: !res.success })
     if (res.success) {
       setShareInput('')
     }
   }
 
-  const handleUnshare = (userId: string, userName: string) => {
+  const handleUnshare = async (userId: string, userName: string) => {
     if (!todoId()) return
-    const res = store.unshareTodo(todoId(), userId)
+    const res = await store.unshareTodo(todoId(), userId)
     setMessage({
       text: res.success ? `Removed access for ${userName}.` : res.message,
       isError: !res.success,
     })
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const cur = todo()
     if (!cur || !todoId()) return
     if (confirm(cur.isOwner ? 'Are you sure you want to permanently delete this todo?' : 'Remove yourself from this shared todo?')) {
-      store.deleteTodo(todoId())
+      await store.deleteTodo(todoId())
       navigate('/todos')
     }
   }

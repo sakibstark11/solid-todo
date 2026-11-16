@@ -12,11 +12,11 @@ export default function Login() {
   const [password, setPassword] = createSignal('')
   const [errorMessage, setErrorMessage] = createSignal('')
 
-  const handleLogin = (e: SubmitEvent) => {
+  const handleLogin = async (e: SubmitEvent) => {
     e.preventDefault()
     setErrorMessage('')
 
-    const res = store.login(email(), password())
+    const res = await store.login(email(), password())
     if (res.success) {
       navigate('/todos')
     } else {

@@ -13,11 +13,11 @@ export default function Register() {
   const [password, setPassword] = createSignal('')
   const [errorMessage, setErrorMessage] = createSignal('')
 
-  const handleRegister = (e: SubmitEvent) => {
+  const handleRegister = async (e: SubmitEvent) => {
     e.preventDefault()
     setErrorMessage('')
 
-    const res = store.register(name(), email(), password())
+    const res = await store.register(name(), email(), password())
     if (res.success) {
       navigate('/todos')
     } else {

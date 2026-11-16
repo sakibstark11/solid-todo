@@ -2,13 +2,12 @@ import { createSignal } from 'solid-js'
 
 export interface User {
   id: string
-  email: string
   name: string
-  passwordHash: string
+  email: string
   createdAt: string
 }
 
-export interface Todo {
+export interface TodoWithShares {
   id: string
   title: string
   description: string
@@ -16,18 +15,6 @@ export interface Todo {
   creatorId: string
   createdAt: string
   updatedAt: string
-}
-
-export interface Share {
-  id: string
-  todoId: string
-  userId: string
-  active: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-export interface TodoWithShares extends Todo {
   creatorName: string
   creatorEmail: string
   isOwner: boolean
@@ -40,363 +27,334 @@ export interface TodoWithShares extends Todo {
   }>
 }
 
-const STORAGE_KEY_USERS = 'todo_users_v2'
-const STORAGE_KEY_TODOS = 'todo_items_v2'
-const STORAGE_KEY_SHARES = 'todo_shares_v2'
-const STORAGE_KEY_SESSION = 'todo_session_v2'
+const STORAGE_KEY_SESSION = 'todo_session_user_v3'
 
-function getFromStorage<T>(key: string, defaultValue: T): T {
+function getSessionUser(): User | null {
   try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return defaultValue
-    return JSON.parse(raw) as T
+    const raw = localStorage.getItem(STORAGE_KEY_SESSION)
+    return raw ? (JSON.parse(raw) as User) : null
   } catch {
-    return defaultValue
+    return null
   }
 }
 
-function saveToStorage<T>(key: string, value: T): void {
+function saveSessionUser(user: User | null): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
+    if (user) {
+      localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(user))
+    } else {
+      localStorage.removeItem(STORAGE_KEY_SESSION)
+    }
   } catch (err) {
-    console.error('Failed to save to localStorage:', err)
+    console.error('Failed to save session:', err)
   }
 }
 
-// Clean initialization - starts completely empty
-const initialUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, [])
-const initialTodos = getFromStorage<Todo[]>(STORAGE_KEY_TODOS, [])
-const initialShares = getFromStorage<Share[]>(STORAGE_KEY_SHARES, [])
-const sessionUserId = getFromStorage<string | null>(STORAGE_KEY_SESSION, null)
-const initialSession = sessionUserId ? initialUsers.find((u) => u.id === sessionUserId) || null : null
+// Global Signals
+const [currentUser, setCurrentUserSignal] = createSignal<User | null>(getSessionUser())
+const [users, setUsers] = createSignal<User[]>([])
+const [todos, setTodos] = createSignal<TodoWithShares[]>([])
 
-// Also clear any legacy v1 storage if present
-try {
-  localStorage.removeItem('todo_app_users_v1')
-  localStorage.removeItem('todo_app_todos_v1')
-  localStorage.removeItem('todo_app_shares_v1')
-  localStorage.removeItem('todo_app_session_v1')
-} catch {}
+// Auto-sync functions
+async function fetchUsers(): Promise<User[]> {
+  try {
+    const res = await fetch('/api/users')
+    if (res.ok) {
+      const data = (await res.json()) as User[]
+      setUsers(data)
+      return data
+    }
+  } catch (err) {
+    console.error('Failed to fetch users:', err)
+  }
+  return []
+}
 
-const [users, setUsers] = createSignal<User[]>(initialUsers)
-const [todos, setTodos] = createSignal<Todo[]>(initialTodos)
-const [shares, setShares] = createSignal<Share[]>(initialShares)
-const [currentUser, setCurrentUserSignal] = createSignal<User | null>(initialSession)
+async function fetchTodos(userId?: string): Promise<TodoWithShares[]> {
+  const uid = userId || currentUser()?.id
+  if (!uid) {
+    setTodos([])
+    return []
+  }
+  try {
+    const res = await fetch(`/api/todos?userId=${encodeURIComponent(uid)}`)
+    if (res.ok) {
+      const data = (await res.json()) as TodoWithShares[]
+      setTodos(data)
+      return data
+    }
+  } catch (err) {
+    console.error('Failed to fetch todos:', err)
+  }
+  return []
+}
+
+// Initial fetch if user is logged in
+if (currentUser()) {
+  fetchUsers()
+  fetchTodos()
+} else {
+  fetchUsers()
+}
+
+// Periodic background refresh (every 3s) so changes from other tabs/incognito appear automatically
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    fetchUsers()
+    if (currentUser()) {
+      fetchTodos()
+    }
+  }, 3000)
+}
 
 export const store = {
   // Signals
   currentUser,
   users,
   todos,
-  shares,
 
-  // Auth methods
-  login(email: string, password: string): { success: boolean; error?: string; user?: User } {
-    const cleanEmail = email.trim().toLowerCase()
-    const allUsers = users()
-    const user = allUsers.find((u) => u.email === cleanEmail)
-    if (!user || user.passwordHash !== password) {
-      return { success: false, error: 'Invalid email or password.' }
-    }
-    saveToStorage(STORAGE_KEY_SESSION, user.id)
-    setCurrentUserSignal(user)
-    return { success: true, user }
+  // Manual refreshes
+  async refreshUsers(): Promise<User[]> {
+    return await fetchUsers()
   },
 
-  register(name: string, email: string, password: string): { success: boolean; error?: string; user?: User } {
-    const cleanEmail = email.trim().toLowerCase()
-    const cleanName = name.trim()
-    if (!cleanName) return { success: false, error: 'Name is required.' }
-    if (!cleanEmail || !cleanEmail.includes('@')) return { success: false, error: 'Valid email is required.' }
-    if (password.length < 6) return { success: false, error: 'Password must be at least 6 characters.' }
+  async refreshTodos(): Promise<TodoWithShares[]> {
+    return await fetchTodos()
+  },
 
-    const allUsers = users()
-    if (allUsers.some((u) => u.email === cleanEmail)) {
-      return { success: false, error: 'A user with this email already exists.' }
+  // Auth methods
+  async register(
+    name: string,
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string; user?: User }> {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to create account.' }
+      }
+      const user = data.user as User
+      saveSessionUser(user)
+      setCurrentUserSignal(user)
+      await fetchUsers()
+      await fetchTodos(user.id)
+      return { success: true, user }
+    } catch {
+      return { success: false, error: 'Network error during registration.' }
     }
+  },
 
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      name: cleanName,
-      email: cleanEmail,
-      passwordHash: password,
-      createdAt: new Date().toISOString(),
+  async login(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string; user?: User }> {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Invalid email or password.' }
+      }
+      const user = data.user as User
+      saveSessionUser(user)
+      setCurrentUserSignal(user)
+      await fetchUsers()
+      await fetchTodos(user.id)
+      return { success: true, user }
+    } catch {
+      return { success: false, error: 'Network error during login.' }
     }
-
-    const updated = [...allUsers, newUser]
-    saveToStorage(STORAGE_KEY_USERS, updated)
-    setUsers(updated)
-
-    saveToStorage(STORAGE_KEY_SESSION, newUser.id)
-    setCurrentUserSignal(newUser)
-
-    return { success: true, user: newUser }
   },
 
   logout(): void {
-    saveToStorage(STORAGE_KEY_SESSION, null)
+    saveSessionUser(null)
     setCurrentUserSignal(null)
+    setTodos([])
   },
 
   // Todo queries & mutations
   getTodosForCurrentUser(): TodoWithShares[] {
-    const user = currentUser()
-    if (!user) return []
-
-    const allTodos = todos()
-    const allShares = shares()
-    const allUsers = users()
-
-    const accessibleTodos = allTodos.filter((t) => {
-      if (t.creatorId === user.id) return true
-      return allShares.some((s) => s.todoId === t.id && s.userId === user.id && s.active)
-    })
-
-    accessibleTodos.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-
-    return accessibleTodos.map((t) => {
-      const creator = allUsers.find((u) => u.id === t.creatorId)
-      const todoShares = allShares
-        .filter((s) => s.todoId === t.id && s.active)
-        .map((s) => {
-          const u = allUsers.find((member) => member.id === s.userId)
-          return {
-            shareId: s.id,
-            userId: s.userId,
-            name: u ? u.name : 'Unknown User',
-            email: u ? u.email : '',
-            active: s.active,
-          }
-        })
-
-      return {
-        ...t,
-        creatorName: creator ? creator.name : 'Unknown',
-        creatorEmail: creator ? creator.email : '',
-        isOwner: t.creatorId === user.id,
-        sharedUsers: todoShares,
-      }
-    })
+    return todos()
   },
 
   getTodoById(todoId: string): TodoWithShares | null {
-    const user = currentUser()
-    if (!user) return null
-
-    const allTodos = todos()
-    const t = allTodos.find((item) => item.id === todoId)
-    if (!t) return null
-
-    const allShares = shares()
-    const allUsers = users()
-
-    const hasAccess =
-      t.creatorId === user.id ||
-      allShares.some((s) => s.todoId === t.id && s.userId === user.id && s.active)
-
-    if (!hasAccess) return null
-
-    const creator = allUsers.find((u) => u.id === t.creatorId)
-    const todoShares = allShares
-      .filter((s) => s.todoId === t.id && s.active)
-      .map((s) => {
-        const u = allUsers.find((member) => member.id === s.userId)
-        return {
-          shareId: s.id,
-          userId: s.userId,
-          name: u ? u.name : 'Unknown User',
-          email: u ? u.email : '',
-          active: s.active,
-        }
-      })
-
-    return {
-      ...t,
-      creatorName: creator ? creator.name : 'Unknown',
-      creatorEmail: creator ? creator.email : '',
-      isOwner: t.creatorId === user.id,
-      sharedUsers: todoShares,
-    }
+    return todos().find((t) => t.id === todoId) || null
   },
 
-  createTodo(title: string, description: string): TodoWithShares | null {
-    const user = currentUser()
-    if (!user) return null
-
-    const trimmedTitle = title.trim()
-    if (!trimmedTitle) return null
-
-    const newTodo: Todo = {
-      id: crypto.randomUUID(),
-      title: trimmedTitle,
-      description: description.trim(),
-      complete: false,
-      creatorId: user.id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    const updated = [newTodo, ...todos()]
-    saveToStorage(STORAGE_KEY_TODOS, updated)
-    setTodos(updated)
-
-    return this.getTodoById(newTodo.id)
-  },
-
-  toggleComplete(todoId: string): void {
-    const allTodos = todos()
-    const updated = allTodos.map((t) => {
-      if (t.id === todoId) {
-        return {
-          ...t,
-          complete: !t.complete,
-          updatedAt: new Date().toISOString(),
-        }
-      }
-      return t
-    })
-    saveToStorage(STORAGE_KEY_TODOS, updated)
-    setTodos(updated)
-  },
-
-  updateTodo(todoId: string, updates: { title?: string; description?: string }): boolean {
-    const allTodos = todos()
-    const item = allTodos.find((t) => t.id === todoId)
-    if (!item) return false
-
-    const updated = allTodos.map((t) => {
-      if (t.id === todoId) {
-        return {
-          ...t,
-          title: updates.title !== undefined ? updates.title.trim() : t.title,
-          description: updates.description !== undefined ? updates.description.trim() : t.description,
-          updatedAt: new Date().toISOString(),
-        }
-      }
-      return t
-    })
-    saveToStorage(STORAGE_KEY_TODOS, updated)
-    setTodos(updated)
-    return true
-  },
-
-  deleteTodo(todoId: string): boolean {
+  async createTodo(title: string, description: string): Promise<boolean> {
     const user = currentUser()
     if (!user) return false
 
-    const allTodos = todos()
-    const item = allTodos.find((t) => t.id === todoId)
-    if (!item) return false
-
-    if (item.creatorId !== user.id) {
-      this.unshareTodo(todoId, user.id)
-      return true
+    try {
+      const res = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, userId: user.id }),
+      })
+      if (res.ok) {
+        await fetchTodos(user.id)
+        return true
+      }
+    } catch (err) {
+      console.error('Failed to create todo:', err)
     }
-
-    const updatedTodos = allTodos.filter((t) => t.id !== todoId)
-    const updatedShares = shares().filter((s) => s.todoId !== todoId)
-
-    saveToStorage(STORAGE_KEY_TODOS, updatedTodos)
-    saveToStorage(STORAGE_KEY_SHARES, updatedShares)
-    setTodos(updatedTodos)
-    setShares(updatedShares)
-    return true
+    return false
   },
 
+  async toggleComplete(todoId: string): Promise<void> {
+    const item = todos().find((t) => t.id === todoId)
+    if (!item) return
+
+    const newComplete = !item.complete
+
+    // Optimistic update
+    setTodos((prev) =>
+      prev.map((t) => (t.id === todoId ? { ...t, complete: newComplete } : t))
+    )
+
+    try {
+      await fetch(`/api/todos/${encodeURIComponent(todoId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ complete: newComplete }),
+      })
+    } catch (err) {
+      console.error('Failed to toggle todo:', err)
+      await fetchTodos()
+    }
+  },
+
+  async updateTodo(
+    todoId: string,
+    updates: { title?: string; description?: string }
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/todos/${encodeURIComponent(todoId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (res.ok) {
+        await fetchTodos()
+        return true
+      }
+    } catch (err) {
+      console.error('Failed to update todo:', err)
+    }
+    return false
+  },
+
+  async deleteTodo(todoId: string): Promise<boolean> {
+    const user = currentUser()
+    if (!user) return false
+
+    // Optimistic removal
+    setTodos((prev) => prev.filter((t) => t.id !== todoId))
+
+    try {
+      const res = await fetch(
+        `/api/todos/${encodeURIComponent(todoId)}?userId=${encodeURIComponent(user.id)}`,
+        { method: 'DELETE' }
+      )
+      if (res.ok) {
+        await fetchTodos(user.id)
+        return true
+      }
+    } catch (err) {
+      console.error('Failed to delete todo:', err)
+      await fetchTodos(user.id)
+    }
+    return false
+  },
+
+  // Share methods
   searchUsers(query: string): User[] {
     const cur = currentUser()
     const clean = query.trim().toLowerCase()
-    if (!clean) return []
-    return users().filter(
+    const otherUsers = users().filter((u) => u.id !== cur?.id)
+
+    if (!clean) return otherUsers
+
+    return otherUsers.filter(
       (u) =>
-        u.id !== cur?.id &&
-        (u.name.toLowerCase().includes(clean) || u.email.toLowerCase().includes(clean))
+        u.name.toLowerCase().includes(clean) ||
+        u.email.toLowerCase().includes(clean)
     )
   },
 
-  shareTodoWithUser(todoId: string, targetUserId: string): { success: boolean; message: string } {
+  async shareTodoWithUser(
+    todoId: string,
+    targetUserId: string
+  ): Promise<{ success: boolean; message: string }> {
     const user = currentUser()
     if (!user) return { success: false, message: 'You must be logged in to share.' }
 
-    const targetUser = users().find((u) => u.id === targetUserId)
-    if (!targetUser) {
-      return { success: false, message: 'User not found.' }
-    }
-
-    if (targetUser.id === user.id) {
-      return { success: false, message: 'You cannot share a todo with yourself.' }
-    }
-
-    const allTodos = todos()
-    const todo = allTodos.find((t) => t.id === todoId)
-    if (!todo) return { success: false, message: 'Todo not found.' }
-
-    const allShares = shares()
-    const existing = allShares.find((s) => s.todoId === todoId && s.userId === targetUser.id)
-
-    if (existing) {
-      if (existing.active) {
-        return { success: false, message: `Already shared with ${targetUser.name} (${targetUser.email}).` }
-      } else {
-        const updatedShares = allShares.map((s) =>
-          s.id === existing.id ? { ...s, active: true, updatedAt: new Date().toISOString() } : s
-        )
-        saveToStorage(STORAGE_KEY_SHARES, updatedShares)
-        setShares(updatedShares)
-        return { success: true, message: `Re-activated share with ${targetUser.name} (${targetUser.email})!` }
+    try {
+      const res = await fetch(`/api/todos/${encodeURIComponent(todoId)}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetQuery: targetUserId, userId: user.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        await fetchTodos(user.id)
+        return { success: true, message: data.message }
       }
+      return { success: false, message: data.error || 'Failed to share todo.' }
+    } catch {
+      return { success: false, message: 'Network error while sharing.' }
     }
-
-    const newShare: Share = {
-      id: crypto.randomUUID(),
-      todoId,
-      userId: targetUser.id,
-      active: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
-    const updatedShares = [...allShares, newShare]
-    saveToStorage(STORAGE_KEY_SHARES, updatedShares)
-    setShares(updatedShares)
-
-    return { success: true, message: `Successfully shared with ${targetUser.name} (${targetUser.email})!` }
   },
 
-  shareTodo(todoId: string, targetQuery: string): { success: boolean; message: string } {
+  async shareTodo(
+    todoId: string,
+    targetQuery: string
+  ): Promise<{ success: boolean; message: string }> {
     const user = currentUser()
     if (!user) return { success: false, message: 'You must be logged in to share.' }
 
-    const clean = targetQuery.trim().toLowerCase()
-    if (!clean) return { success: false, message: 'Please enter a name or email.' }
-
-    const otherUsers = users().filter((u) => u.id !== user.id)
-    const targetUser =
-      otherUsers.find((u) => u.email.toLowerCase() === clean) ||
-      otherUsers.find((u) => u.name.toLowerCase() === clean) ||
-      otherUsers.find((u) => u.name.toLowerCase().includes(clean) || u.email.toLowerCase().includes(clean))
-
-    if (!targetUser) {
-      return { success: false, message: `No registered user found matching "${targetQuery}".` }
+    try {
+      const res = await fetch(`/api/todos/${encodeURIComponent(todoId)}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetQuery, userId: user.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        await fetchTodos(user.id)
+        return { success: true, message: data.message }
+      }
+      return { success: false, message: data.error || 'Failed to share todo.' }
+    } catch {
+      return { success: false, message: 'Network error while sharing.' }
     }
-
-    return this.shareTodoWithUser(todoId, targetUser.id)
   },
 
-  unshareTodo(todoId: string, targetUserId: string): { success: boolean; message: string } {
-    const allShares = shares()
-    const targetShare = allShares.find((s) => s.todoId === todoId && s.userId === targetUserId && s.active)
-
-    if (!targetShare) {
-      return { success: false, message: 'Share not found or already inactive.' }
+  async unshareTodo(
+    todoId: string,
+    targetUserId: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch(
+        `/api/todos/${encodeURIComponent(todoId)}/share/${encodeURIComponent(targetUserId)}`,
+        { method: 'DELETE' }
+      )
+      const data = await res.json()
+      if (res.ok && data.success) {
+        await fetchTodos()
+        return { success: true, message: data.message }
+      }
+      return { success: false, message: data.error || 'Failed to remove access.' }
+    } catch {
+      return { success: false, message: 'Network error while unsharing.' }
     }
-
-    const updatedShares = allShares.map((s) =>
-      s.id === targetShare.id ? { ...s, active: false, updatedAt: new Date().toISOString() } : s
-    )
-
-    saveToStorage(STORAGE_KEY_SHARES, updatedShares)
-    setShares(updatedShares)
-    return { success: true, message: 'Access removed successfully.' }
   },
 }
