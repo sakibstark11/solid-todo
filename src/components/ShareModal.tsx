@@ -1,5 +1,5 @@
-import { createSignal, Show, For } from 'solid-js'
-import { store, type TodoWithShares } from '../lib/store'
+import { createSignal, createMemo, Show, For } from 'solid-js'
+import { store, type TodoWithShares, type User } from '../lib/store'
 
 interface ShareModalProps {
   todoId: string
@@ -7,34 +7,38 @@ interface ShareModalProps {
 }
 
 export default function ShareModal(props: ShareModalProps) {
-  const [emailInput, setEmailInput] = createSignal('')
+  const [searchInput, setSearchInput] = createSignal('')
   const [feedback, setFeedback] = createSignal<{ text: string; isError: boolean } | null>(null)
 
   const todo = (): TodoWithShares | null => store.getTodoById(props.todoId)
 
-  const otherUsers = () => {
-    const cur = store.currentUser()
-    return store.users().filter((u) => u.id !== cur?.id)
+  const searchResults = createMemo<User[]>(() => {
+    const q = searchInput().trim()
+    if (!q) return []
+    return store.searchUsers(q)
+  })
+
+  const handleShareWithUser = (targetUser: User) => {
+    const res = store.shareTodoWithUser(props.todoId, targetUser.id)
+    setFeedback({ text: res.message, isError: !res.success })
+    if (res.success) {
+      setSearchInput('')
+    }
   }
 
-  const handleShare = (e?: SubmitEvent) => {
-    if (e) e.preventDefault()
-    const target = emailInput().trim()
+  const handleFormSubmit = (e: SubmitEvent) => {
+    e.preventDefault()
+    const target = searchInput().trim()
     if (!target) {
-      setFeedback({ text: 'Please enter an email address.', isError: true })
+      setFeedback({ text: 'Please enter a name or email address.', isError: true })
       return
     }
 
     const res = store.shareTodo(props.todoId, target)
     setFeedback({ text: res.message, isError: !res.success })
     if (res.success) {
-      setEmailInput('')
+      setSearchInput('')
     }
-  }
-
-  const handleQuickSelectEmail = (email: string) => {
-    setEmailInput(email)
-    setFeedback(null)
   }
 
   const handleUnshare = (userId: string, userName: string) => {
@@ -95,20 +99,31 @@ export default function ShareModal(props: ShareModalProps) {
             )}
           </Show>
 
-          {/* Share Input Form */}
-          <form onSubmit={handleShare} class="mt-5 space-y-4">
+          {/* Search Form (by Name or Email) */}
+          <form onSubmit={handleFormSubmit} class="mt-5 space-y-3">
             <div>
               <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Share with a user (by email)
+                Search user by name or email
               </label>
               <div class="flex gap-2">
-                <input
-                  type="email"
-                  value={emailInput()}
-                  onInput={(e) => setEmailInput(e.currentTarget.value)}
-                  placeholder="Enter registered user email"
-                  class="flex-1 px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                />
+                <div class="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchInput()}
+                    onInput={(e) => setSearchInput(e.currentTarget.value)}
+                    placeholder="Search by name or email..."
+                    class="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                  <Show when={searchInput()}>
+                    <button
+                      type="button"
+                      onClick={() => setSearchInput('')}
+                      class="absolute right-3 top-2.5 text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  </Show>
+                </div>
                 <button
                   type="submit"
                   class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
@@ -118,23 +133,36 @@ export default function ShareModal(props: ShareModalProps) {
               </div>
             </div>
 
-            {/* Registered Users Chips */}
-            <Show when={otherUsers().length > 0}>
-              <div>
-                <p class="text-xs text-gray-500 mb-1.5">Registered team members:</p>
-                <div class="flex flex-wrap gap-1.5">
-                  <For each={otherUsers()}>
-                    {(u) => (
+            {/* Live Search Results */}
+            <Show when={searchInput().trim().length > 0}>
+              <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+                <p class="text-xs font-semibold text-gray-500">
+                  Matching users ({searchResults().length}):
+                </p>
+
+                <For each={searchResults()}>
+                  {(user) => (
+                    <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 shadow-xs">
+                      <div>
+                        <div class="text-xs font-bold text-gray-800">{user.name}</div>
+                        <div class="text-[11px] text-gray-500">{user.email}</div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => handleQuickSelectEmail(u.email)}
-                        class="px-2.5 py-1 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 text-gray-700 text-xs rounded-full border border-gray-200 transition-colors"
+                        onClick={() => handleShareWithUser(user)}
+                        class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
                       >
-                        + {u.name} ({u.email})
+                        Share
                       </button>
-                    )}
-                  </For>
-                </div>
+                    </div>
+                  )}
+                </For>
+
+                <Show when={searchResults().length === 0}>
+                  <p class="text-xs text-gray-400 italic py-1">
+                    No registered user found matching "{searchInput()}".
+                  </p>
+                </Show>
               </div>
             </Show>
           </form>

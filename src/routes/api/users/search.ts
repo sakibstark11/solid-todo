@@ -1,4 +1,4 @@
-import { eq, and, ne, ilike } from 'drizzle-orm'
+import { eq, and, ne, ilike, or } from 'drizzle-orm'
 import { db } from '../../../server/db'
 import { users } from '../../../server/db/schema'
 
@@ -32,14 +32,14 @@ export async function get(req: Request): Promise<Response> {
         .from(users)
         .where(and(eq(users.active, true), ne(users.id, currentUser[0].id)))
     } else {
-      // Search by name (case-insensitive)
+      // Search by name or email (case-insensitive)
       results = await db
         .select({ id: users.id, email: users.email, name: users.name })
         .from(users)
         .where(
           and(
             eq(users.active, true),
-            ilike(users.name, `%${query}%`),
+            or(ilike(users.name, `%${query}%`), ilike(users.email, `%${query}%`)),
             ne(users.id, currentUser[0].id)
           )
         )

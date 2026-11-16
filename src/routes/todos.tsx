@@ -1,11 +1,15 @@
 import { createSignal, createMemo, Show, For } from 'solid-js'
-import { A } from '@solidjs/router'
+import { A, Navigate } from '@solidjs/router'
 import { store, type TodoWithShares } from '../lib/store'
 import ShareModal from '../components/ShareModal'
 
 type FilterType = 'all' | 'active' | 'completed' | 'shared' | 'mine'
 
 export default function Todos() {
+  if (!store.currentUser()) {
+    return <Navigate href="/login" />
+  }
+
   const [filter, setFilter] = createSignal<FilterType>('all')
   const [searchQuery, setSearchQuery] = createSignal('')
   const [newTitle, setNewTitle] = createSignal('')
@@ -73,26 +77,6 @@ export default function Todos() {
   return (
     <div class="min-h-[calc(100vh-4rem)] bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div class="max-w-4xl mx-auto space-y-6">
-        {/* Not Logged In Banner */}
-        <Show when={!store.currentUser()}>
-          <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-bold text-amber-900">You are currently viewing as guest</h3>
-                <p class="text-xs text-amber-700 mt-0.5">
-                  Sign in or create an account to save and share your tasks.
-                </p>
-              </div>
-              <A
-                href="/login"
-                class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-sm"
-              >
-                Sign In &rarr;
-              </A>
-            </div>
-          </div>
-        </Show>
-
         {/* Action Notice Toast */}
         <Show when={actionNotice()}>
           <div class="bg-blue-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center justify-between transition-all">

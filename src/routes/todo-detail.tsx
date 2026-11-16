@@ -1,8 +1,12 @@
-import { createSignal, Show, For } from 'solid-js'
-import { useParams, useNavigate, A } from '@solidjs/router'
-import { store, type TodoWithShares } from '../lib/store'
+import { createSignal, createMemo, Show, For } from 'solid-js'
+import { useParams, useNavigate, A, Navigate } from '@solidjs/router'
+import { store, type TodoWithShares, type User } from '../lib/store'
 
 export default function TodoDetail() {
+  if (!store.currentUser()) {
+    return <Navigate href="/login" />
+  }
+
   const params = useParams()
   const navigate = useNavigate()
 
@@ -12,8 +16,14 @@ export default function TodoDetail() {
   const [isEditing, setIsEditing] = createSignal(false)
   const [editTitle, setEditTitle] = createSignal('')
   const [editDesc, setEditDesc] = createSignal('')
-  const [shareEmail, setShareEmail] = createSignal('')
+  const [shareInput, setShareInput] = createSignal('')
   const [message, setMessage] = createSignal<{ text: string; isError: boolean } | null>(null)
+
+  const searchResults = createMemo<User[]>(() => {
+    const q = shareInput().trim()
+    if (!q) return []
+    return store.searchUsers(q)
+  })
 
   // Initialize editing fields when entering edit mode
   const startEditing = () => {
@@ -39,15 +49,24 @@ export default function TodoDetail() {
     }
   }
 
-  const handleShare = (e: SubmitEvent) => {
-    e.preventDefault()
-    const email = shareEmail().trim()
-    if (!email || !todoId()) return
-
-    const res = store.shareTodo(todoId(), email)
+  const handleShareWithUser = (targetUser: User) => {
+    if (!todoId()) return
+    const res = store.shareTodoWithUser(todoId(), targetUser.id)
     setMessage({ text: res.message, isError: !res.success })
     if (res.success) {
-      setShareEmail('')
+      setShareInput('')
+    }
+  }
+
+  const handleShare = (e: SubmitEvent) => {
+    e.preventDefault()
+    const target = shareInput().trim()
+    if (!target || !todoId()) return
+
+    const res = store.shareTodo(todoId(), target)
+    setMessage({ text: res.message, isError: !res.success })
+    if (res.success) {
+      setShareInput('')
     }
   }
 
@@ -67,11 +86,6 @@ export default function TodoDetail() {
       store.deleteTodo(todoId())
       navigate('/todos')
     }
-  }
-
-  const otherUsers = () => {
-    const cur = store.currentUser()
-    return store.users().filter((u) => u.id !== cur?.id)
   }
 
   return (
@@ -255,17 +269,17 @@ export default function TodoDetail() {
                   </p>
                 </div>
 
-                {/* Add Share Form */}
+                {/* Share Form (by Name or Email) */}
                 <form onSubmit={handleShare} class="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
                   <label class="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Invite user by email
+                    Search user by name or email to share
                   </label>
                   <div class="flex gap-2">
                     <input
-                      type="email"
-                      value={shareEmail()}
-                      onInput={(e) => setShareEmail(e.currentTarget.value)}
-                      placeholder="Enter user email address"
+                      type="text"
+                      value={shareInput()}
+                      onInput={(e) => setShareInput(e.currentTarget.value)}
+                      placeholder="Type name or email..."
                       class="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                     />
                     <button
@@ -276,20 +290,34 @@ export default function TodoDetail() {
                     </button>
                   </div>
 
-                  <Show when={otherUsers().length > 0}>
-                    <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span class="text-xs text-gray-500">Quick select:</span>
-                      <For each={otherUsers()}>
-                        {(u) => (
-                          <button
-                            type="button"
-                            onClick={() => setShareEmail(u.email)}
-                            class="px-2.5 py-0.5 bg-white text-gray-700 hover:bg-blue-100 hover:text-blue-800 text-xs rounded-full border border-gray-200 transition-colors"
-                          >
-                            + {u.name}
-                          </button>
+                  {/* Matching User Results */}
+                  <Show when={shareInput().trim().length > 0}>
+                    <div class="bg-white border border-gray-200 rounded-xl p-3 space-y-2 mt-2">
+                      <p class="text-xs font-semibold text-gray-500">
+                        Matching users ({searchResults().length}):
+                      </p>
+                      <For each={searchResults()}>
+                        {(user) => (
+                          <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-100">
+                            <div>
+                              <div class="text-xs font-bold text-gray-800">{user.name}</div>
+                              <div class="text-[11px] text-gray-500">{user.email}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleShareWithUser(user)}
+                              class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+                            >
+                              Share
+                            </button>
+                          </div>
                         )}
                       </For>
+                      <Show when={searchResults().length === 0}>
+                        <p class="text-xs text-gray-400 italic py-1">
+                          No registered user found matching "{shareInput()}".
+                        </p>
+                      </Show>
                     </div>
                   </Show>
                 </form>

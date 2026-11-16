@@ -303,16 +303,24 @@ export const store = {
     return true
   },
 
-  shareTodo(todoId: string, targetEmail: string): { success: boolean; message: string } {
+  searchUsers(query: string): User[] {
+    const cur = currentUser()
+    const clean = query.trim().toLowerCase()
+    if (!clean) return []
+    return users().filter(
+      (u) =>
+        u.id !== cur?.id &&
+        (u.name.toLowerCase().includes(clean) || u.email.toLowerCase().includes(clean))
+    )
+  },
+
+  shareTodoWithUser(todoId: string, targetUserId: string): { success: boolean; message: string } {
     const user = currentUser()
     if (!user) return { success: false, message: 'You must be logged in to share.' }
 
-    const cleanEmail = targetEmail.trim().toLowerCase()
-    if (!cleanEmail) return { success: false, message: 'Please enter a valid email.' }
-
-    const targetUser = users().find((u) => u.email === cleanEmail)
+    const targetUser = users().find((u) => u.id === targetUserId)
     if (!targetUser) {
-      return { success: false, message: `No registered user found with email "${cleanEmail}".` }
+      return { success: false, message: 'User not found.' }
     }
 
     if (targetUser.id === user.id) {
@@ -328,14 +336,14 @@ export const store = {
 
     if (existing) {
       if (existing.active) {
-        return { success: false, message: `Already shared with ${targetUser.name} (${cleanEmail}).` }
+        return { success: false, message: `Already shared with ${targetUser.name} (${targetUser.email}).` }
       } else {
         const updatedShares = allShares.map((s) =>
           s.id === existing.id ? { ...s, active: true, updatedAt: new Date().toISOString() } : s
         )
         saveToStorage(STORAGE_KEY_SHARES, updatedShares)
         setShares(updatedShares)
-        return { success: true, message: `Re-activated share with ${targetUser.name} (${cleanEmail})!` }
+        return { success: true, message: `Re-activated share with ${targetUser.name} (${targetUser.email})!` }
       }
     }
 
@@ -352,7 +360,27 @@ export const store = {
     saveToStorage(STORAGE_KEY_SHARES, updatedShares)
     setShares(updatedShares)
 
-    return { success: true, message: `Successfully shared with ${targetUser.name} (${cleanEmail})!` }
+    return { success: true, message: `Successfully shared with ${targetUser.name} (${targetUser.email})!` }
+  },
+
+  shareTodo(todoId: string, targetQuery: string): { success: boolean; message: string } {
+    const user = currentUser()
+    if (!user) return { success: false, message: 'You must be logged in to share.' }
+
+    const clean = targetQuery.trim().toLowerCase()
+    if (!clean) return { success: false, message: 'Please enter a name or email.' }
+
+    const otherUsers = users().filter((u) => u.id !== user.id)
+    const targetUser =
+      otherUsers.find((u) => u.email.toLowerCase() === clean) ||
+      otherUsers.find((u) => u.name.toLowerCase() === clean) ||
+      otherUsers.find((u) => u.name.toLowerCase().includes(clean) || u.email.toLowerCase().includes(clean))
+
+    if (!targetUser) {
+      return { success: false, message: `No registered user found matching "${targetQuery}".` }
+    }
+
+    return this.shareTodoWithUser(todoId, targetUser.id)
   },
 
   unshareTodo(todoId: string, targetUserId: string): { success: boolean; message: string } {

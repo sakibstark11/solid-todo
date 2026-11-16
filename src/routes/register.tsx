@@ -1,8 +1,12 @@
 import { createSignal, Show } from 'solid-js'
-import { A, useNavigate } from '@solidjs/router'
+import { A, useNavigate, Navigate } from '@solidjs/router'
 import { store } from '../lib/store'
 
 export default function Register() {
+  if (store.currentUser()) {
+    return <Navigate href="/todos" />
+  }
+
   const navigate = useNavigate()
   const [name, setName] = createSignal('')
   const [email, setEmail] = createSignal('')
