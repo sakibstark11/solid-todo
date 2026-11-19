@@ -16,6 +16,8 @@ export type Tokens = {
 
 export type AuthResponse = Tokens & { user: User };
 
+// The current access token. While a refresh is running this holds the pending
+// refresh promise, so anyone who awaits it waits for the new token.
 let token: Promise<string | null> = Promise.resolve(null);
 let session = new AbortController();
 
@@ -35,30 +37,38 @@ export function clearTokens() {
   setSignedIn(false);
 }
 
-async function refreshAccessToken(): Promise<string | null> {
+// Never rejects. Doesn't assign `token`: the caller stores this promise there.
+async function doRefresh(): Promise<string | null> {
   const refresh = localStorage.getItem(REFRESH_KEY);
   if (!refresh) {
     clearTokens();
     return null;
   }
 
+  const { signal } = session;
+
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: refresh }),
-      signal: session.signal,
+      signal,
     });
 
     if (!response.ok) throw new Error('Refresh failed');
 
     const tokens: Tokens = await response.json();
+
+    // Logged out while the body was downloading: don't resurrect the session.
+    if (signal.aborted) return null;
+
     localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
-    token = Promise.resolve(tokens.accessToken);
     setSignedIn(true);
     return tokens.accessToken;
   } catch {
-    clearTokens();
+    // If aborted, clearTokens() already ran. Calling it again would abort
+    // the fresh session that replaced it.
+    if (!signal.aborted) clearTokens();
     return null;
   }
 }
@@ -68,7 +78,6 @@ export async function fetchWithAuth(
   options: RequestInit = {}
 ): Promise<Response> {
   const url = `${API_BASE}${path}`;
-  let accessToken = await token;
 
   const makeRequest = (t: string | null) => {
     const headers = new Headers(options.headers);
@@ -77,11 +86,15 @@ export async function fetchWithAuth(
     return fetch(url, { ...options, headers, signal: session.signal });
   };
 
-  let response = await makeRequest(accessToken);
+  const used = token;
+  let response = await makeRequest(await used);
 
   if (response.status === 401) {
-    accessToken = await refreshAccessToken();
-    response = await makeRequest(accessToken);
+    // Same promise as when we started: nobody has refreshed yet, so we do it.
+    // Different promise: another request already started (or finished) a
+    // refresh, so just wait on that one.
+    if (token === used) token = doRefresh();
+    response = await makeRequest(await token);
   }
 
   return response;
