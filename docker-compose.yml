@@ -15,20 +15,22 @@ services:
       timeout: 3s
       retries: 12
 
-  app:
+  api:
     image: node:24-slim
     working_dir: /app
     volumes:
       - .:/app
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      SESSION_SECRET: ${SESSION_SECRET}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      PORT: 3001
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "npm install --no-audit --no-fund && npm run db:migrate && npm run dev"
+    command: sh -c "npm install --no-audit --no-fund && npm run db:migrate -w @todo-app/api && npm run dev -w @todo-app/api"
 
 volumes:
   postgres_data:

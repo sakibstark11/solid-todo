@@ -1,45 +1,46 @@
 # Todo App
 
 A todo application with user accounts, todo sharing, and user search.
-Built with SolidStart v2, Drizzle ORM, PostgreSQL, and Material UI for SolidJS (`@suid/material`).
+Built with a Solid 2.0 frontend and a Koa backend, Drizzle ORM, and PostgreSQL.
 
 ## Features
 
-- Register, sign in, and sign out with session cookies
+- Register and sign in with JWT access and refresh tokens
 - Create, edit, complete, and soft-delete todos
-- Share todos with other users (view or edit permission), and revoke shares
+- Share todos with other users (view or edit permission) and revoke shares
 - "Shared with me" list
 - Search users by name
 - Every list uses cursor pagination
-- Server-side rendering, and forms work without JavaScript
 
 ## Quick start
 
-Requirements: Docker with the Compose plugin.
+Requirements: Docker with the Compose plugin, Node.js 24+.
 
 ```bash
 cp .env.example .env
 ```
 
-Set `SESSION_SECRET` in `.env` to a random value:
+Set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `.env` to random values:
 
 ```bash
 openssl rand -hex 32
 ```
 
-Start the stack:
+Start the database and API:
 
 ```bash
 docker compose up -d
 ```
 
-Open http://localhost:3000.
+The API is available at http://localhost:3001.
 
-The `app` service uses the `node:24-slim` image directly. It mounts this
-repository, installs dependencies, applies database migrations, and starts the
-dev server. No Dockerfile is needed. The `postgres` service stores data in the
-`postgres_data` volume. Container dependencies live in the `app_node_modules`
-volume, separate from the host's `node_modules`.
+Start the Solid 2.0 frontend:
+
+```bash
+npm run dev -w @todo-app/web
+```
+
+The frontend is available at http://localhost:3000. It proxies `/api` to the backend.
 
 To reset the database completely:
 
@@ -52,9 +53,9 @@ docker compose up -d
 
 | Command | Action |
 |---|---|
-| `npm run dev` | Start the dev server (port 3000) |
-| `npm run build` | Build for production into `.output/` |
-| `npm start` | Run the production build |
+| `npm run dev` | Start the Solid 2.0 frontend in development mode |
+| `npm run dev -w @todo-app/api` | Start the Koa API locally (Docker runs this by default) |
+| `npm run build` | Build all apps for production |
 | `npm run typecheck` | Check TypeScript types |
 | `npm run db:generate` | Generate a migration from the schema |
 | `npm run db:migrate` | Apply pending migrations |
@@ -62,53 +63,44 @@ docker compose up -d
 ## Project structure
 
 ```
-src/
-  app.tsx                  Root component: theme, auth context, layout
-  entry-client.tsx         Client hydration entry
-  entry-server.tsx         Server document entry
-  middleware.ts            Security response headers
-  routes/                  File-based pages
-    index.tsx              Redirects to /todos or /login
-    login.tsx              Sign in
-    register.tsx           Sign up
-    todos.tsx              Todo lists (mine / shared with me)
-    users/search.tsx       User search
-    [...404].tsx           Not found
-  components/              UI components (Material UI)
-  lib/
-    api.ts                 query() and action() wrappers
-    types.ts               Shared data types
-    cursor.ts              Client-side cursor history
-  server/
-    users.ts               "use server": auth and user search RPC
-    todos.ts               "use server": todo RPC
-    shares.ts              "use server": share RPC
-    auth.ts                Session cookie and route guards
-    password.ts            scrypt hashing
-    access.ts              Ownership and share permission checks
-    validation.ts          Zod schemas
-    pagination.ts          Cursor encode/decode and page assembly
-    revalidate.ts          Query invalidation helper
-    db.ts                  Connection pool
-    schema.ts              Tables and indexes
-    repositories/          All database queries
-drizzle/                   Versioned SQL migrations
+apps/
+  api/                       Koa backend
+    drizzle.config.ts        Drizzle configuration
+    src/
+      db/                    Drizzle schema and connection
+      lib/                   Shared helpers (errors, JWT, pagination, password)
+      middleware/            Koa middleware (auth, error handling)
+      repositories/          Database queries (repo layer)
+      routes/                HTTP route handlers
+      services/              Business logic layer
+      validation/            Zod schemas
+      index.ts               Application entry point
+  web/                       Solid 2.0 frontend
+    src/
+      routes/                File-system routes
+      lib/                   API client and auth context
+      App.tsx                Root component
+      Document.tsx           HTML shell
+      router.ts              Router bootstrap
+drizzle/                     Versioned SQL migrations (managed from apps/api)
 ```
 
 ## Architecture
 
 Each layer has one job:
 
-- **Routes and components** render UI and call the wrappers in `lib/api.ts`.
-- **`lib/api.ts`** binds server functions to router `query` (cached reads) and
-  `action` (mutations) keys.
-- **`server/*.ts` RPC modules** validate input with Zod, check permissions,
-  call repositories, and invalidate affected queries.
-- **`server/repositories/`** holds every database query. It knows nothing
-  about HTTP, sessions, or validation.
-- **Cross-cutting logic** stays in its own module: sessions in `auth.ts`,
-  hashing in `password.ts`, cursors in `pagination.ts`, invalidation in
-  `revalidate.ts`, permission resolution in `access.ts`.
+- **Routes** parse HTTP requests and call services.
+- **Services** validate input with Zod, check permissions, and call repositories.
+- **Repositories** hold every database query. They know nothing about HTTP or JWT.
+- **Cross-cutting logic** stays in its own module: JWT in `lib/jwt.ts`, hashing in
+  `lib/password.ts`, cursors in `lib/pagination.ts`, and errors in `lib/errors.ts`.
+
+### Authentication
+
+Access tokens expire after 15 minutes and are sent in the `Authorization` header.
+Refresh tokens expire after 7 days and are returned at login and from the refresh
+endpoint. Call `/auth/refresh` with a refresh token to obtain a new access token
+and a rotated refresh token.
 
 ### Pagination
 
@@ -117,29 +109,30 @@ Lists use keyset (cursor) pagination, not OFFSET. Todo and share lists order by
 The cursor is an opaque base64url token that holds the last row's sort keys.
 The next page selects rows strictly after the cursor, so deep pages stay fast
 and concurrent inserts cannot shift rows between pages. Responses carry
-`{ items, total, pageSize, nextCursor }`. The UI keeps a cursor history for
-"Previous" navigation. The composite index
-`todos_user_active_idx (user_id, created_at, id)` covers the main list query.
+`{ items, total, pageSize, nextCursor }`.
 
 ### Soft delete
 
 Deleting a todo sets `deleted_at`. Every list and permission check filters
 deleted rows out. The row stays in the database.
 
-## Security
+## API endpoints
 
-- Passwords hash with scrypt using OWASP minimum cost parameters.
-- Sessions use an encrypted, sealed cookie (`useSession`): HttpOnly,
-  SameSite=Lax, and Secure in production. The server never trusts a user id
-  from the client.
-- Every mutation validates input with Zod and checks ownership or share
-  permission on the server.
-- Queries are parameterized through Drizzle. User search escapes LIKE
-  wildcards.
-- Security headers on every response: `X-Content-Type-Options`,
-  `X-Frame-Options`, `Referrer-Policy`.
-- Server code and secrets never reach the client bundle.
-- Redirect targets are restricted to internal paths.
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/register` | Create an account |
+| POST | `/auth/login` | Sign in |
+| POST | `/auth/refresh` | Refresh access token |
+| POST | `/auth/logout` | Sign out (client clears tokens) |
+| GET | `/auth/me` | Current user |
+| GET | `/todos?tab=mine|shared&cursor=` | List my todos or shared todos |
+| POST | `/todos` | Create a todo |
+| PATCH | `/todos/:id` | Update a todo |
+| DELETE | `/todos/:id` | Soft-delete a todo |
+| GET | `/todos/:id/shares?cursor=&pageSize=` | List shares for a todo |
+| POST | `/todos/:id/shares` | Share a todo |
+| DELETE | `/todos/:id/shares/:userId` | Revoke a share |
+| GET | `/users/search?q=&cursor=` | Search users by name |
 
 ## Environment variables
 
@@ -148,15 +141,15 @@ deleted rows out. The row stays in the database.
 | `POSTGRES_USER` | Postgres role (compose) |
 | `POSTGRES_PASSWORD` | Postgres password (compose) |
 | `POSTGRES_DB` | Database name (compose) |
-| `DATABASE_URL` | Connection string for host tooling; compose builds its own for the app container |
-| `SESSION_SECRET` | Cookie encryption key, at least 32 characters |
+| `DATABASE_URL` | Connection string for host tooling |
+| `JWT_ACCESS_SECRET` | Access token signing key, at least 32 characters |
+| `JWT_REFRESH_SECRET` | Refresh token signing key, at least 32 characters |
 
 ## Production
 
 ```bash
 npm run build
-DATABASE_URL=... SESSION_SECRET=... NODE_ENV=production npm start
+DATABASE_URL=... JWT_ACCESS_SECRET=... JWT_REFRESH_SECRET=... NODE_ENV=production npm start -w @todo-app/api
 ```
 
-Serve the app behind TLS. Session cookies carry the `Secure` flag when
-`NODE_ENV` is `production`.
+Serve the app behind TLS.
