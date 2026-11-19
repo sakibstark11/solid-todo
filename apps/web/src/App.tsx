@@ -1,20 +1,22 @@
-import { Router } from './router';
-import { AuthProvider } from './lib/auth';
+import { Loading } from 'solid-js';
+import { Router, paths } from './router';
 import './App.css';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        {(props) => (
-          <div class="app">
-            <header>
-              <h1>Todo App</h1>
-            </header>
+    <Router>
+      {(props) => (
+        <div class="app">
+          <header>
+            <h1>
+              <a href={paths()}>Todo App</a>
+            </h1>
+          </header>
+          <Loading fallback={<main>Loading…</main>}>
             <main>{props.children}</main>
-          </div>
-        )}
-      </Router>
-    </AuthProvider>
+          </Loading>
+        </div>
+      )}
+    </Router>
   );
 }

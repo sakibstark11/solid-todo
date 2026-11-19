@@ -1,7 +1,13 @@
-import { pageRoutes } from 'virtual:file-routes';
+import { lazy } from 'solid-js';
 import { createRouter } from '@solidjs/router';
-import { fileRoutes } from '@solidjs/router/fs';
 
 export const Router = createRouter({
-  routes: fileRoutes(pageRoutes),
+  routes: [
+    { path: '/', component: lazy(() => import('./pages/Home')) },
+    { path: '/login', component: lazy(() => import('./pages/Login')) },
+    { path: '/register', component: lazy(() => import('./pages/Register')) },
+    { path: '*404', component: lazy(() => import('./pages/NotFound')) },
+  ],
 });
+
+export const { paths } = Router;

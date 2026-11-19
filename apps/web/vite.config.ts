@@ -1,6 +1,7 @@
-import { fileRoutes } from 'filesystem-routing/vite';
 import { defineConfig } from 'vite';
 import solid from '@solidjs/vite-plugin';
+
+const API_TARGET = process.env.API_URL ?? 'http://localhost:3001';
 
 export default defineConfig({
   plugins: [
@@ -8,13 +9,13 @@ export default defineConfig({
       start: true,
       extensions: ['.jsx', '.tsx'],
     }),
-    fileRoutes({ types: true }),
   ],
   server: {
     port: 3000,
+    host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: API_TARGET,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

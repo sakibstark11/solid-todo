@@ -2,7 +2,9 @@
   "name": "@todo-app/api",
   "version": "1.0.0",
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "node --watch --experimental-strip-types src/index.ts",
     "start": "node --experimental-strip-types src/index.ts",
@@ -12,7 +14,7 @@
   },
   "dependencies": {
     "@koa/cors": "^5.0.0",
-    "@koa/router": "^13.1.0",
+    "@koa/router": "^15.0.0",
     "drizzle-orm": "^0.45.4",
     "jsonwebtoken": "^9.0.2",
     "koa": "^2.16.1",

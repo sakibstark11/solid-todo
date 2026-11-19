@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { body } from '../lib/request.ts';
 import { authMiddleware } from '../middleware/auth.middleware.ts';
 import * as sharesService from '../services/shares.service.ts';
 
@@ -19,7 +20,7 @@ router.get('/todos/:id/shares', authMiddleware, async (ctx) => {
 router.post('/todos/:id/shares', authMiddleware, async (ctx) => {
   const userId = ctx.state.user.sub;
   const todoId = ctx.params.id;
-  await sharesService.shareTodo(userId, todoId, ctx.request.body);
+  await sharesService.shareTodo(userId, todoId, body(ctx));
   ctx.status = 204;
 });
 

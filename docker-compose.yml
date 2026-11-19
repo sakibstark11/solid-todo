@@ -32,5 +32,18 @@ services:
         condition: service_healthy
     command: sh -c "npm install --no-audit --no-fund && npm run db:migrate -w @todo-app/api && npm run dev -w @todo-app/api"
 
+  web:
+    image: node:24-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      API_URL: http://api:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    command: sh -c "npm install --no-audit --no-fund && npm run dev -w @todo-app/web"
+
 volumes:
   postgres_data:

@@ -26,21 +26,19 @@ Set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `.env` to random values:
 openssl rand -hex 32
 ```
 
-Start the database and API:
+Start the stack:
 
 ```bash
 docker compose up -d
 ```
 
-The API is available at http://localhost:3001.
+The API is available at http://localhost:3001 and the Solid 2.0 frontend is at http://localhost:3000. The frontend proxies `/api` to the backend.
 
-Start the Solid 2.0 frontend:
+To run the frontend locally against a local API:
 
 ```bash
 npm run dev -w @todo-app/web
 ```
-
-The frontend is available at http://localhost:3000. It proxies `/api` to the backend.
 
 To reset the database completely:
 
@@ -77,11 +75,11 @@ apps/
       index.ts               Application entry point
   web/                       Solid 2.0 frontend
     src/
-      routes/                File-system routes
-      lib/                   API client and auth context
-      App.tsx                Root component
+      pages/                 Route components
+      lib/                   API client with signals and fetch interceptor
+      App.tsx                Root component with Loading boundary
       Document.tsx           HTML shell
-      router.ts              Router bootstrap
+      router.ts              Explicit router config
 drizzle/                     Versioned SQL migrations (managed from apps/api)
 ```
 

@@ -1,4 +1,5 @@
 import Router from '@koa/router';
+import { body } from '../lib/request.ts';
 import { authMiddleware } from '../middleware/auth.middleware.ts';
 import * as todosService from '../services/todos.service.ts';
 
@@ -18,14 +19,14 @@ router.get('/todos', authMiddleware, async (ctx) => {
 router.post('/todos', authMiddleware, async (ctx) => {
   const userId = ctx.state.user.sub;
   const ownerName = ctx.state.user.name;
-  const result = await todosService.createTodo(userId, ownerName, ctx.request.body);
+  const result = await todosService.createTodo(userId, ownerName, body(ctx));
   ctx.status = 201;
   ctx.body = result;
 });
 
 router.patch('/todos/:id', authMiddleware, async (ctx) => {
   const userId = ctx.state.user.sub;
-  ctx.body = await todosService.updateTodo(userId, ctx.params.id, ctx.request.body);
+  ctx.body = await todosService.updateTodo(userId, ctx.params.id, body(ctx));
 });
 
 router.delete('/todos/:id', authMiddleware, async (ctx) => {

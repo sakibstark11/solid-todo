@@ -1,11 +1,10 @@
 import { createSignal, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
-import { login, setTokens } from '../lib/api';
-import { useAuth } from '../lib/auth';
+import { register } from '../lib/api';
 
-export default function Login() {
+export default function Register() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const [name, setName] = createSignal('');
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [error, setError] = createSignal('');
@@ -14,21 +13,28 @@ export default function Login() {
     event.preventDefault();
     setError('');
     try {
-      const response = await login(email(), password());
-      setTokens(response);
-      setUser(response.user);
+      await register(name(), email(), password());
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed');
+      setError(err instanceof Error ? err.message : 'Registration failed');
     }
   }
 
   return (
     <form onSubmit={submit}>
-      <h2>Sign in</h2>
+      <h2>Create account</h2>
       <Show when={error()}>
         <p class="error">{error()}</p>
       </Show>
+      <label>
+        Name
+        <input
+          type="text"
+          value={name()}
+          onInput={(event) => setName(event.currentTarget.value)}
+          required
+        />
+      </label>
       <label>
         Email
         <input
@@ -47,9 +53,9 @@ export default function Login() {
           required
         />
       </label>
-      <button type="submit">Sign in</button>
+      <button type="submit">Create account</button>
       <p>
-        No account? <a href="/register">Register</a>.
+        Already have an account? <a href="/login">Sign in</a>.
       </p>
     </form>
   );

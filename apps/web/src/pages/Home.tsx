@@ -1,13 +1,9 @@
 import { Show } from 'solid-js';
-import { useAuth } from '../lib/auth';
-import { clearTokens } from '../lib/api';
+import { clearTokens, user } from '../lib/api';
 
 export default function Home() {
-  const { user, setUser } = useAuth();
-
   function logout() {
     clearTokens();
-    setUser(null);
   }
 
   return (
