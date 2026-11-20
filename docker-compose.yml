@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: postgres
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,12 +17,13 @@ services:
       retries: 12
 
   api:
+    container_name: api
     image: node:24-slim
     working_dir: /app
     volumes:
       - .:/app
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       PORT: 3001
@@ -33,6 +35,7 @@ services:
     command: sh -c "npm install --no-audit --no-fund && npm run db:migrate -w @todo-app/api && npm run dev -w @todo-app/api"
 
   web:
+    container_name: web
     image: node:24-slim
     working_dir: /app
     volumes:

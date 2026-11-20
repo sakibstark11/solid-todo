@@ -5,6 +5,8 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../lib/jw
 import { HttpError } from '../lib/errors.ts';
 import { registerSchema, loginSchema, refreshTokenSchema } from '../validation/schemas.ts';
 
+const RefreshTokenStore = new Map<string, string>();
+
 export async function register(body: unknown) {
   const { name, email, password } = registerSchema.parse(body);
   const passwordHash = await hashPassword(password);
@@ -32,9 +34,11 @@ export async function login(body: unknown) {
   if (!userRow || !(await verifyPassword(password, userRow.passwordHash)))
     throw new HttpError(401, 'Invalid email or password');
   const { id, name } = userRow;
+  const refreshToken = signRefreshToken({ sub: id });
+  RefreshTokenStore.set(id, refreshToken);
   return {
     accessToken: signAccessToken({ sub: id, name, email }),
-    refreshToken: signRefreshToken({ sub: id }),
+    refreshToken,
     user: { id, name, email },
   };
 }
@@ -44,14 +48,20 @@ export async function refresh(body: unknown) {
   let payload: { sub: string };
   try {
     payload = verifyRefreshToken(refreshToken);
+    if (RefreshTokenStore.get(payload.sub) !== refreshToken) {
+      throw Error('Refresh token not found in store');
+    }
   } catch {
     throw new HttpError(401, 'Invalid or expired refresh token');
   }
   const user = await usersRepo.findById(payload.sub);
   if (!user) throw new HttpError(401, 'User not found');
+
+  const newRefreshToken = signRefreshToken({ sub: user.id });
+  RefreshTokenStore.set(user.id, newRefreshToken);
   return {
     accessToken: signAccessToken({ sub: user.id, name: user.name, email: user.email }),
-    refreshToken: signRefreshToken({ sub: user.id }),
+    refreshToken: newRefreshToken,
   };
 }
 

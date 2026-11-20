@@ -4,11 +4,7 @@
   "workspaces": [
     "apps/*"
   ],
-  "scripts": {
-    "dev": "npm run dev -w @todo-app/web",
-    "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "db:generate": "npm run db:generate --workspace=@todo-app/api",
-    "db:migrate": "npm run db:migrate --workspace=@todo-app/api"
+  "devDependencies": {
+    "typescript": "^5.7.2"
   }
 }

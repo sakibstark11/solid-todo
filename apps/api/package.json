@@ -9,6 +9,7 @@
     "dev": "node --watch --experimental-strip-types src/index.ts",
     "start": "node --experimental-strip-types src/index.ts",
     "typecheck": "tsc --noEmit",
+    "build": "tsc --outDir dist",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts"
   },
@@ -27,9 +28,8 @@
     "@types/koa": "^2.15.0",
     "@types/koa__cors": "^5.0.0",
     "@types/koa__router": "^12.0.4",
-    "@types/node": "^24.7.0",
+    "@types/node": "^24.19.2",
     "@types/pg": "^8.11.0",
-    "drizzle-kit": "^0.31.11",
-    "typescript": "^5.7.2"
+    "drizzle-kit": "^0.31.11"
   }
 }

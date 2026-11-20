@@ -1,4 +1,5 @@
-CREATE EXTENSION IF NOT EXISTS pg_trgm;--> statement-breakpoint
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TYPE "public"."share_permission" AS ENUM('view', 'edit');--> statement-breakpoint
 CREATE TABLE "shares" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
