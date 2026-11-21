@@ -18,7 +18,7 @@ Replace `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `.env` with distinct ran
 docker compose up -d
 ```
 
-Compose starts PostgreSQL, applies migrations, and runs the API and web app. Open <http://localhost:3000>; the API is at <http://localhost:3001>.
+Compose starts PostgreSQL, applies migrations, and runs the API and web app. The API and web containers mount only their respective app directories and keep dependencies in separate volumes. Open <http://localhost:3000>; the API is at <http://localhost:3001>.
 
 ## Local frontend development
 
