@@ -1,0 +1,122 @@
+.dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.headingActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.15rem;
+  color: #9793a0;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.heading h2 {
+  margin: 0;
+  font-size: 1.65rem;
+  letter-spacing: -0.05em;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-self: start;
+  margin-bottom: 0;
+  padding: 0.3rem;
+  border: 1px solid #303039;
+  border-radius: 13px;
+  background: #141419;
+}
+
+.tabs > * {
+  border-radius: 9px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 2.5rem;
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  padding: 2rem 1rem;
+  border: 1px solid #303039;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #1b1b22, #17171d);
+  text-align: center;
+}
+
+.emptyIcon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  margin-bottom: 0.8rem;
+  border-radius: 18px;
+  background: #30243c;
+  color: #c89cff;
+}
+
+.empty h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.empty p {
+  margin: 0;
+  color: #a3a0ad;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .heading {
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .headingActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .headingActions > :first-child {
+    flex: 1;
+  }
+
+  .tabs > * {
+    flex: 1;
+  }
+}

@@ -1,0 +1,38 @@
+.field {
+  display: grid;
+  gap: 0.4rem;
+  color: #d8d5df;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.label {
+  display: block;
+}
+
+.control {
+  width: 100%;
+  min-width: 0;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid #3a3944;
+  border-radius: 8px;
+  background: #111116;
+  color: #f5f3f8;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.control:focus {
+  border-color: #d25cbd;
+  outline: 3px solid rgba(191, 80, 196, 0.19);
+}
+
+.control:disabled {
+  background: #1b1b21;
+  color: #8d8996;
+}
+
+textarea.control {
+  resize: vertical;
+}

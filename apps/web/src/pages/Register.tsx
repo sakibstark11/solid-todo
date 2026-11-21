@@ -1,6 +1,12 @@
 import { createSignal, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
+import Button from '../components/Button';
+import Icon from '../components/Icon';
+import Notice from '../components/Notice';
+import Panel from '../components/Panel';
+import TextField from '../components/TextField';
 import { register } from '../lib/api';
+import styles from './AuthPage.module.css';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -21,42 +27,48 @@ export default function Register() {
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Create account</h2>
+    <Panel class={styles.panel}>
+      <div class={styles.title}>
+        <span class={styles.titleIcon}><Icon name="user-plus" size={20} /></span>
+        <div>
+          <p>Your next step starts here</p>
+          <h2>Create account</h2>
+        </div>
+      </div>
       <Show when={error()}>
-        <p class="error">{error()}</p>
+        <Notice variant="error">{error()}</Notice>
       </Show>
-      <label>
-        Name
-        <input
-          type="text"
+      <form class={styles.form} onSubmit={submit}>
+        <TextField
+          id="register-name"
+          label="Name"
           value={name()}
-          onInput={(event) => setName(event.currentTarget.value)}
+          onInput={setName}
           required
         />
-      </label>
-      <label>
-        Email
-        <input
+        <TextField
+          id="register-email"
+          label="Email"
           type="email"
           value={email()}
-          onInput={(event) => setEmail(event.currentTarget.value)}
+          onInput={setEmail}
           required
         />
-      </label>
-      <label>
-        Password
-        <input
+        <TextField
+          id="register-password"
+          label="Password"
           type="password"
           value={password()}
-          onInput={(event) => setPassword(event.currentTarget.value)}
+          onInput={setPassword}
           required
         />
-      </label>
-      <button type="submit">Create account</button>
-      <p>
+        <Button type="submit" class={styles.submit}>
+          <Icon name="user-plus" size={16} /> Create account
+        </Button>
+      </form>
+      <p class={styles.footer}>
         Already have an account? <a href="/login">Sign in</a>.
       </p>
-    </form>
+    </Panel>
   );
 }

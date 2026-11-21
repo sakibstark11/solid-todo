@@ -1,6 +1,12 @@
 import { createSignal, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
+import Button from '../components/Button';
+import Icon from '../components/Icon';
+import Notice from '../components/Notice';
+import Panel from '../components/Panel';
+import TextField from '../components/TextField';
 import { login } from '../lib/api';
+import styles from './AuthPage.module.css';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,33 +26,39 @@ export default function Login() {
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Sign in</h2>
+    <Panel class={styles.panel}>
+      <div class={styles.title}>
+        <span class={styles.titleIcon}><Icon name="log-in" size={20} /></span>
+        <div>
+          <p>Welcome back</p>
+          <h2>Sign in</h2>
+        </div>
+      </div>
       <Show when={error()}>
-        <p class="error">{error()}</p>
+        <Notice variant="error">{error()}</Notice>
       </Show>
-      <label>
-        Email
-        <input
+      <form class={styles.form} onSubmit={submit}>
+        <TextField
+          id="login-email"
+          label="Email"
           type="email"
           value={email()}
-          onInput={(event) => setEmail(event.currentTarget.value)}
+          onInput={setEmail}
           required
         />
-      </label>
-      <label>
-        Password
-        <input
+        <TextField
+          id="login-password"
+          label="Password"
           type="password"
           value={password()}
-          onInput={(event) => setPassword(event.currentTarget.value)}
+          onInput={setPassword}
           required
         />
-      </label>
-      <button type="submit">Sign in</button>
-      <p>
+        <Button type="submit" class={styles.submit}><Icon name="log-in" size={16} /> Sign in</Button>
+      </form>
+      <p class={styles.footer}>
         No account? <a href="/register">Register</a>.
       </p>
-    </form>
+    </Panel>
   );
 }

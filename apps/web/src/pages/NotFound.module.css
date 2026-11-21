@@ -1,0 +1,30 @@
+.panel {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+}
+
+.icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin-bottom: 1rem;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #43283d, #302342);
+  color: #ff83ae;
+}
+
+.code {
+  margin: 0 0 0.35rem;
+  color: #a3a0ad;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.panel h2 {
+  margin: 0 0 1.25rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.04em;
+}

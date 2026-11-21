@@ -1,0 +1,31 @@
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.error {
+  border-color: #58313b;
+  background: #2a1d24;
+  color: #ff9ca5;
+}
+
+.info {
+  border-color: #37334f;
+  background: #211f30;
+  color: #c5b5ff;
+}
+
+.warning {
+  border-color: #574333;
+  background: #2a241b;
+  color: #f1c97b;
+}
+
+.success {
+  border-color: #2d5147;
+  background: #1b2a26;
+  color: #82dbb4;
+}

@@ -1,0 +1,64 @@
+.backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(5, 5, 9, 0.78);
+  backdrop-filter: blur(7px);
+}
+
+.dialog {
+  width: min(100%, 540px);
+  overflow: hidden;
+  border: 1px solid #3a3944;
+  border-radius: 16px;
+  background: #1b1b22;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.header,
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.header {
+  border-bottom: 1px solid #303039;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.headingIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(140deg, #43283d, #302342);
+  color: #ff83ae;
+}
+
+.body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.footer {
+  justify-content: flex-end;
+  border-top: 1px solid #303039;
+}

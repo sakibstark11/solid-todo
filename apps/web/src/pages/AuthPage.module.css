@@ -1,0 +1,62 @@
+.panel {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border-color: #373640;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(170, 66, 153, 0.14), transparent 16rem),
+    #1a1a21;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.titleIcon {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #43283d, #302342);
+  color: #ff83ae;
+}
+
+.title p {
+  margin: 0 0 0.1rem;
+  color: #a3a0ad;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.title h2 {
+  margin: 0;
+  font-size: 1.45rem;
+  letter-spacing: -0.035em;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.footer {
+  margin: 1.25rem 0 0;
+  color: #a3a0ad;
+}
+
+.footer a {
+  color: #ff78a6;
+  font-weight: 650;
+}

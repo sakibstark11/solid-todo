@@ -1,0 +1,35 @@
+.spinner,
+.spinnerSmall {
+  display: inline-block;
+  border: 3px solid #3a3944;
+  border-right-color: #cf5bd0;
+  border-radius: 50%;
+  animation: spin 650ms linear infinite;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+}
+
+.spinnerSmall {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-width: 2px;
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
